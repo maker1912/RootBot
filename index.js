@@ -154,5 +154,6 @@ async function startBot() {
       await sock.sendMessage(jid, { text: balasan });
     }
   });
+}
 
 startBot().catch(console.error);
