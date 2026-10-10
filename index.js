@@ -11,28 +11,6 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
-const OWNER_NUMBER = '628561411054';
-
-const RULES = `
-1. Dilarang menggunakan cheat.
-2. Dilarang melakukan griefing.
-3. Hormati semua pemain.
-4. Dilarang spam dan toxic.
-5. Patuhi arahan admin.
-`;
-
-const ABOUT = `
-${SERVER_NAME}
-Server Minecraft Bedrock.
-Tempat bermain dan bersenang-senang bersama!
-`;
-
-const SOCIALS = `
-WhatsApp: https://chat.whatsapp.com/CONTOH
-YouTube: https://youtube.com/@CONTOH
-Discord: https://discord.gg/CONTOH
-`;
-
 import fs from 'node:fs';
 
 const config = JSON.parse(
