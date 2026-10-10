@@ -1,8 +1,9 @@
-
 import makeWASocket, {
   useMultiFileAuthState,
-  downloadMediaMessage
+  downloadMediaMessage,
+  Browsers
 } from '@whiskeysockets/baileys';
+
 
 import sharp from 'sharp';
 import os from 'node:os';
@@ -33,7 +34,7 @@ const SOCIALS = Object.entries(config.SOCIALS)
 
 
 
-async function checkBedrockServer(afddress) {
+async function checkBedrockServer(address) {
   const url =
     `https://api.mcstatus.io/v2/status/bedrock/${encodeURIComponent(address)}`;
 
@@ -296,10 +297,16 @@ async function startBot() {
   const { state, saveCreds } =
     await useMultiFileAuthState('./session');
 
-  const sock = makeWASocket({
-    auth: state,
-    logger: pino({ level: 'silent' })
-  });
+
+const sock = makeWASocket({
+  auth: state,
+  logger: pino({ level: 'info' }),
+  browser: Browsers.macOS('Desktop'),
+  connectTimeoutMs: 60000,
+  defaultQueryTimeoutMs: 60000,
+  keepAliveIntervalMs: 15000
+});
+
 
   
 sock.ev.on('group-participants.update', async update => {
@@ -352,21 +359,39 @@ sock.ev.on('group-participants.update', async update => {
     }
   });
 
-  if (!state.creds.registered) {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
+  
+if (!state.creds.registered) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
 
-    try {
-      const nomor = (await rl.question(
-        'Nomor WhatsApp (contoh 62812xxxx): '
-      )).trim().replace(/\D/g, '');
+  try {
+    const nomor = (
+      await rl.question('Nomor WhatsApp (contoh 62812xxxx): ')
+    ).trim().replace(/\D/g, '');
 
-      if (!/^62\d{8,15}$/.test(nomor)) {
-        console.log('Format nomor tidak valid. Gunakan format 628xxxxxxxxxx.');
-        return;
-      }
+    if (!/^62\d{8,15}$/.test(nomor)) {
+      throw new Error('Format nomor tidak valid. Gunakan format 62...');
+    }
+
+    console.log('Menghubungkan ke WhatsApp...');
+
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    const kode = await sock.requestPairingCode(nomor);
+
+    console.log('\nKode pairing:', kode);
+    console.log('Buka WhatsApp > Perangkat tertaut > Tautkan perangkat.');
+    console.log('Pilih opsi tautkan dengan nomor telepon, lalu masukkan kode.');
+  } catch (error) {
+    console.error('Pairing gagal:', error.message);
+    console.error('Periksa log koneksi di atas untuk mengetahui penyebabnya.');
+  } finally {
+    rl.close();
+  }
+}
+
 
       await new Promise(resolve => setTimeout(resolve, 1500));
 
