@@ -17,5 +17,11 @@
     "WhatsApp": "LINK_WHATSAPP",
     "YouTube": "LINK_YOUTUBE",
     "Discord": "LINK_DISCORD"
+  
+  "WELCOME_ENABLED": true,
+  "GOODBYE_ENABLED": true,
+  "WELCOME_MESSAGE": "👋 Selamat datang {user} di {group}! Sekarang ada {count} anggota.",
+  "GOODBYE_MESSAGE": "👋 {user} telah keluar dari {group}. Anggota sekarang: {count}."
+
   }
 }
