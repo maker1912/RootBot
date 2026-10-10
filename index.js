@@ -300,7 +300,7 @@ async function startBot() {
 
 const sock = makeWASocket({
   auth: state,
-  logger: pino({ level: 'info' }),
+  logger: pino({ level: 'silent' }),
   browser: Browsers.macOS('Desktop'),
   connectTimeoutMs: 60000,
   defaultQueryTimeoutMs: 60000,
