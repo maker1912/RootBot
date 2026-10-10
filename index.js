@@ -8,7 +8,6 @@ import readline from 'node:readline/promises';
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import readline from 'node:readline/promises';
 
 const execFileAsync = promisify(execFile);
 
