@@ -10,6 +10,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { promisify } from 'node:util';
 import { execFile } from 'node:child_process';
+import pino from "pino";
 
 const execFileAsync = promisify(execFile);
 
