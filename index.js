@@ -9,10 +9,10 @@ import readline from 'node:readline/promises';
 const BOT_NAME = 'VARZE BOT';
 const SERVER_NAME = 'Rootakses SMP';
 
-const SERVER_IP = 'play.example.com';
-const SERVER_PORT = 19132;
+const SERVER_IP = 'play.rootakses.my.id';
+const SERVER_PORT = 23719;
 
-const OWNER_NUMBER = '6281234567890';
+const OWNER_NUMBER = '628561411054';
 
 const RULES = `
 1. Dilarang menggunakan cheat.
