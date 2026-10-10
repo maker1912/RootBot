@@ -30,19 +30,17 @@ const SOCIALS = Object.entries(config.SOCIALS)
   .join('\n');
 
 
+
 async function checkBedrockServer(address) {
   const url =
-    `https://api.mcsrvstat.us/bedrock/3/${encodeURIComponent(address)}`;
+    `https://api.mcstatus.io/v2/status/bedrock/${encodeURIComponent(address)}`;
 
   const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'VARZE-BOT/1.0'
-    },
-    signal: AbortSignal.timeout(15000)
+    signal: AbortSignal.timeout(10000)
   });
 
   if (!response.ok) {
-    throw new Error(`API HTTP ${response.status}`);
+    throw new Error(`MCStatus.io HTTP ${response.status}`);
   }
 
   return await response.json();
@@ -53,20 +51,22 @@ async function getPingMessage(address, label) {
 
   if (!data.online) {
     return (
-      `🏓 CEK SERVER ${label}\n\n` +
+      `🏓 STATUS ${label}\n\n` +
       `🌐 Alamat: ${address}\n` +
       `🔴 Status: Offline atau tidak terjangkau`
     );
   }
 
   return (
-    `🏓 STATUS SERVER ${label}\n\n` +
-    `🌐 Alamat: ${data.hostname || data.ip || address}:${data.port || ''}\n` +
+    `🏓 STATUS ${label}\n\n` +
+    `🌐 Alamat: ${data.host || address}\n` +
+    `🔌 Port: ${data.port ?? '?'}\n` +
     `🟢 Status: Online\n` +
     `👥 Pemain: ${data.players?.online ?? '?'} / ${data.players?.max ?? '?'}\n` +
-    `🎮 Versi: ${data.version || 'Tidak diketahui'}`
+    `🎮 Versi: ${data.version?.name || 'Tidak diketahui'}`
   );
 }
+
 
 
 const UPDATE_REPO = 'maker1912/rootbot';
@@ -303,21 +303,30 @@ async function startBot() {
           break;
 
 
+
         case '/ping': {
           const args = isi.trim().split(/\s+/);
-          const address = args[1] || `${SERVER_IP}:${SERVER_PORT}`;
-          const label = args[1] ? 'SERVER TARGET' : SERVER_NAME;
+          const address = args[1]
+            ? args[1]
+            : `${SERVER_IP}:${SERVER_PORT}`;
+
+          const label = args[1]
+            ? 'SERVER TARGET'
+            : SERVER_NAME;
 
           try {
             balasan = await getPingMessage(address, label);
           } catch (error) {
-            console.error('Gagal mengecek server:', error.message);
+            console.error('MCStatus.io:', error.message);
 
             balasan =
               `❌ Gagal mengecek server.\n` +
               `🌐 Alamat: ${address}\n` +
-              `Coba lagi nanti atau periksa alamat server.`;
+              `API tidak dapat memberikan status. Coba lagi nanti.`;
           }
+
+          break;
+        }
 
           break;
         }
