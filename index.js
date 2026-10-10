@@ -707,16 +707,9 @@ case '/bratvid': {
     try {
         const sticker = await createBratVideoSticker(bratText);
 
-        await sock.sendMessage(jid, {
-            sticker: sticker
-        }, { quoted: msg });
-    } catch (error) {
-        console.error('BRATVID error:', error);
-
-        await sock.sendMessage(jid, {
-            text: 'Gagal membuat stiker BRATVID.'
-        }, { quoted: msg });
-    }
+if (balasan && balasan.trim() !== '') {
+    await sock.sendMessage(jid, { text: balasan });
+}
 
     break;
 }
