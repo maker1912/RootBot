@@ -350,32 +350,32 @@ sock.ev.on('group-participants.update', async (update) => {
  
   sock.ev.on('creds.update', saveCreds);
 
-sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
+sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+    if (connection === 'open') {
+        console.log('✅ WhatsApp terhubung!');
+    }
+
     if (connection === 'close') {
-        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const statusCode =
+            lastDisconnect?.error?.output?.statusCode;
 
-        console.log('❌ Koneksi terputus');
-        console.log('Kode:', statusCode);
+        console.log('❌ Koneksi terputus. Kode:', statusCode);
 
-        if (statusCode === 515) {
-            console.log('🔄 WhatsApp meminta restart socket...');
-            startBot();
+        if (statusCode === 401) {
+            console.log('⚠️ Sesi perlu diperiksa atau ditautkan ulang.');
             return;
         }
-    }
 
-    if (connection === 'open') {
-        console.log('✅ WhatsApp berhasil terhubung!');
+        if (statusCode === 515) {
+            console.log('🔄 Server meminta socket dibuat ulang.');
+        }
+
+        setTimeout(() => {
+            startBot().catch(console.error);
+        }, 3000);
     }
 });
-
   
-if (!state.creds.registered) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
   try {
     const nomor = (
       await rl.question('Nomor WhatsApp (contoh 62812xxxx): ')
