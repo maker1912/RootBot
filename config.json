@@ -1,0 +1,21 @@
+
+{
+  "BOT_NAME": "VARZE BOT",
+  "SERVER_NAME": "Rootakses SMP",
+  "SERVER_IP": "IP_SERVER_KAMU",
+  "SERVER_PORT": 19132,
+  "OWNER_NUMBER": "NOMOR_OWNER_KAMU",
+  "RULES": [
+    "Dilarang menggunakan cheat.",
+    "Dilarang melakukan griefing.",
+    "Hormati semua pemain.",
+    "Dilarang spam dan toxic.",
+    "Patuhi arahan admin."
+  ],
+  "ABOUT": "Server Minecraft Bedrock. Tempat bermain bersama!",
+  "SOCIALS": {
+    "WhatsApp": "LINK_WHATSAPP",
+    "YouTube": "LINK_YOUTUBE",
+    "Discord": "LINK_DISCORD"
+  }
+}
