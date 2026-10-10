@@ -1,6 +1,8 @@
 import makeWASocket, {
   useMultiFileAuthState,
   downloadMediaMessage,
+  browser: Browsers.ubuntu('Chrome'),
+syncFullHistory: false,
 } from '@whiskeysockets/baileys';
 
 
