@@ -13,8 +13,6 @@ import { execFile } from 'node:child_process';
 
 const execFileAsync = promisify(execFile);
 
-import fs from 'node:fs';
-
 const config = JSON.parse(
   fs.readFileSync('./config.json', 'utf8')
 );
