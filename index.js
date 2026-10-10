@@ -61,6 +61,26 @@ async function startBot() {
           text: 'Pong! 🏓'
         });
       }
+
+if (isi.trim().toLowerCase() === '/menu') {
+  await sock.sendMessage(msg.key.remoteJid, {
+    text:
+      '╭───「 BOT MENU 」\n' +
+      '│\n' +
+      '├ /menu - Daftar command\n' +
+      '├ /ping - Cek bot aktif\n' +
+      '├ /halo - Sapaan bot\n' +
+      '│\n' +
+      '╰────────────'
+  });
+}
+
+if (isi.trim().toLowerCase() === '/halo') {
+  await sock.sendMessage(msg.key.remoteJid, {
+    text: 'Halo juga! 👋'
+  });
+}
+
     }
   });
 }
