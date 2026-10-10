@@ -16,7 +16,7 @@
   "SOCIALS": {
     "WhatsApp": "LINK_WHATSAPP",
     "YouTube": "LINK_YOUTUBE",
-    "Discord": "LINK_DISCORD"
+    "Discord": "LINK_DISCORD",
   
   "WELCOME_ENABLED": true,
   "GOODBYE_ENABLED": true,
