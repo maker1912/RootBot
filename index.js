@@ -1,13 +1,15 @@
 
 import makeWASocket, {
-  useMultiFileAuthState
+  useMultiFileAuthState,
+  downloadMediaMessage
 } from '@whiskeysockets/baileys';
 
-import pino from 'pino';
-import readline from 'node:readline/promises';
-
-import { execFile } from 'node:child_process';
+import sharp from 'sharp';
+import os from 'node:os';
+import path from 'node:path';
+import fs from 'node:fs';
 import { promisify } from 'node:util';
+import { execFile } from 'node:child_process';
 
 const execFileAsync = promisify(execFile);
 
@@ -31,7 +33,7 @@ const SOCIALS = Object.entries(config.SOCIALS)
 
 
 
-async function checkBedrockServer(address) {
+async function checkBedrockServer(afddress) {
   const url =
     `https://api.mcstatus.io/v2/status/bedrock/${encodeURIComponent(address)}`;
 
@@ -164,6 +166,132 @@ async function checkGitHubUpdate() {
 setTimeout(checkGitHubUpdate, 5000);
 setInterval(checkGitHubUpdate, UPDATE_INTERVAL);
 
+
+async function getMediaBuffer(sock, msg) {
+  const jid = msg.key.remoteJid;
+  const context = msg.message?.extendedTextMessage?.contextInfo;
+  const quotedMessage = context?.quotedMessage;
+
+  let target = msg;
+
+  if (quotedMessage) {
+    target = {
+      key: {
+        remoteJid: jid,
+        id: context.stanzaId,
+        participant: context.participant,
+        fromMe: false
+      },
+      message: quotedMessage
+    };
+  }
+
+  const type = Object.keys(target.message || {})
+    .find(k => [
+      'imageMessage',
+      'videoMessage',
+      'audioMessage',
+      'stickerMessage'
+    ].includes(k));
+
+  if (!type) {
+    throw new Error('Balas gambar, video, audio, atau stiker.');
+  }
+
+  const buffer = await downloadMediaMessage(
+    target,
+    'buffer',
+    {},
+    { logger: pino({ level: 'silent' }) }
+  );
+
+  return { buffer, type };
+}
+
+async function convertMedia(sock, msg, mode) {
+  const { buffer, type } = await getMediaBuffer(sock, msg);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'varze-'));
+
+  const input = path.join(dir, 'input');
+  const output = path.join(dir, 'output');
+
+  try {
+    fs.writeFileSync(input, buffer);
+
+    if (mode === 'sticker' && type === 'imageMessage') {
+      await sharp(buffer)
+        .resize(512, 512, {
+          fit: 'contain',
+          background: { r: 0, g: 0, b: 0, alpha: 0 }
+        })
+        .webp({ quality: 80 })
+        .toFile(output);
+
+      await sock.sendMessage(msg.key.remoteJid, {
+        sticker: fs.readFileSync(output)
+      }, { quoted: msg });
+
+    } else if (mode === 'image' && type === 'stickerMessage') {
+      await sharp(buffer).png().toFile(output);
+
+      await sock.sendMessage(msg.key.remoteJid, {
+        image: fs.readFileSync(output),
+        caption: '✅ Stiker dikonversi menjadi gambar.'
+      }, { quoted: msg });
+
+    } else if (mode === 'animated' && type === 'videoMessage') {
+      await execFileAsync('ffmpeg', [
+        '-y', '-i', input,
+        '-t', '6',
+        '-vf',
+        'fps=15,scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x00000000',
+        '-an',
+        '-loop', '0',
+        '-c:v', 'libwebp',
+        '-quality', '65',
+        output + '.webp'
+      ], { timeout: 120000 });
+
+      await sock.sendMessage(msg.key.remoteJid, {
+        sticker: fs.readFileSync(output + '.webp'),
+        isAnimated: true
+      }, { quoted: msg });
+
+    } else if (mode === 'audio' && type === 'videoMessage') {
+      await execFileAsync('ffmpeg', [
+        '-y', '-i', input,
+        '-vn', '-codec:a', 'libmp3lame',
+        '-b:a', '128k',
+        output + '.mp3'
+      ], { timeout: 120000 });
+
+      await sock.sendMessage(msg.key.remoteJid, {
+        audio: fs.readFileSync(output + '.mp3'),
+        mimetype: 'audio/mpeg'
+      }, { quoted: msg });
+
+    } else if (mode === 'mp3' && type === 'audioMessage') {
+      await execFileAsync('ffmpeg', [
+        '-y', '-i', input,
+        '-codec:a', 'libmp3lame',
+        '-b:a', '128k',
+        output + '.mp3'
+      ], { timeout: 120000 });
+
+      await sock.sendMessage(msg.key.remoteJid, {
+        audio: fs.readFileSync(output + '.mp3'),
+        mimetype: 'audio/mpeg'
+      }, { quoted: msg });
+
+    } else {
+      throw new Error('Jenis media tidak cocok dengan converter ini.');
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+
 async function startBot() {
   const { state, saveCreds } =
     await useMultiFileAuthState('./session');
@@ -172,6 +300,44 @@ async function startBot() {
     auth: state,
     logger: pino({ level: 'silent' })
   });
+
+  
+sock.ev.on('group-participants.update', async update => {
+  try {
+    const { id, participants, action } = update;
+
+    if (action !== 'add' && action !== 'remove') return;
+
+    const metadata = await sock.groupMetadata(id);
+    const isWelcome = action === 'add';
+
+    if (isWelcome && config.WELCOME_ENABLED === false) return;
+    if (!isWelcome && config.GOODBYE_ENABLED === false) return;
+
+    for (const participant of participants) {
+      const user = `@${participant.split('@')[0]}`;
+
+      const template = isWelcome
+        ? config.WELCOME_MESSAGE
+        : config.GOODBYE_MESSAGE;
+
+      const text = String(template || '')
+        .replaceAll('{user}', user)
+        .replaceAll('{group}', metadata.subject)
+        .replaceAll('{count}', String(metadata.participants.length));
+
+      if (text.trim()) {
+        await sock.sendMessage(id, {
+          text,
+          mentions: [participant]
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Welcome/goodbye:', error.message);
+  }
+});
+
 
   sock.ev.on('creds.update', saveCreds);
 
@@ -269,6 +435,69 @@ async function startBot() {
             '/setsosial - (fitur belum dibuat)';
           break;
 
+
+case '/sticker':
+case '/s':
+case '/toimg':
+case '/tovideo':
+case '/toaudio':
+case '/tomp3': {
+  const modes = {
+    '/sticker': 'sticker',
+    '/s': 'sticker',
+    '/toimg': 'image',
+    '/tovideo': 'animated',
+    '/toaudio': 'audio',
+    '/tomp3': 'mp3'
+  };
+
+  try {
+    await convertMedia(sock, msg, modes[cmd]);
+  } catch (error) {
+    console.error('Converter:', error.message);
+    await sock.sendMessage(jid, {
+      text: `❌ Converter gagal: ${error.message}`
+    }, { quoted: msg });
+  }
+
+  continue;
+}
+
+          
+case '/swgc': {
+  if (!jid.endsWith('@g.us')) {
+    balasan = '❌ Command ini hanya bisa digunakan di grup.';
+    break;
+  }
+
+  try {
+    const metadata = await sock.groupMetadata(jid);
+    const admins = metadata.participants
+      .filter(p => p.admin)
+      .map(p => `• @${p.id.split('@')[0]}`);
+
+    balasan =
+      `📊 STATUS GRUP\n\n` +
+      `👥 Nama: ${metadata.subject}\n` +
+      `🆔 ID: ${metadata.id}\n` +
+      `👤 Anggota: ${metadata.participants.length}\n` +
+      `📝 Deskripsi: ${metadata.desc || 'Belum ada'}\n\n` +
+      `🛡️ Admin:\n${admins.join('\n') || 'Tidak diketahui'}`;
+
+    await sock.sendMessage(jid, {
+      text: balasan,
+      mentions: metadata.participants
+        .filter(p => p.admin)
+        .map(p => p.id)
+    }, { quoted: msg });
+
+    continue;
+  } catch (error) {
+    balasan = '❌ Gagal mengambil informasi grup.';
+  }
+
+  break;
+}
 
 
         case '/ping': {
