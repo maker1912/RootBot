@@ -7,7 +7,7 @@ import makeWASocket, {
 
 import crypto from 'node:crypto';
 
-
+const OWNER_NAME = config.OWNER_NAME || 'Owner';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -423,18 +423,37 @@ if (!state.creds.registered) {
       let balasan = '';
 
       switch (cmd) {
-        case '/menu':
-          balasan =
-            `╭━━〔 ${BOT_NAME} 〕\n` +
-            `┃ Server: ${SERVER_NAME}\n` +
-            '┣━━〔 MENU UTAMA 〕\n' +
-            '┃ /menu - Daftar command\n' +
-            '┃ /ping - Ping server Minecraft\n' +
-            '┃ /aturan - Aturan server\n' +
-            '┃ /about - Tentang server\n' +
-            '┃ /sosial - Media sosial\n' +
-            '╰━━━━━━━━━━━━';
-          break;
+case '/menu':
+  balasan =
+    `╭━━〔 ${BOT_NAME} 〕\n` +
+    `┃ Server: ${SERVER_NAME}\n` +
+    `┃ Owner: ${OWNER_NAME}\n` +
+    '┣━━〔 MENU UTAMA 〕\n' +
+    '┃ /menu - Daftar command\n' +
+    '┃ /ping [IP:PORT] - Ping server Minecraft\n' +
+    '┃ /aturan - Aturan server\n' +
+    '┃ /rule - Aturan server\n' +
+    '┃ /rules - Aturan server\n' +
+    '┃ /about - Tentang server\n' +
+    '┃ /tentang - Tentang server\n' +
+    '┃ /sosial - Media sosial\n' +
+    '┃ /sosials - Media sosial\n' +
+    '┣━━〔 CONVERTER 〕\n' +
+    '┃ /sticker - Gambar jadi stiker\n' +
+    '┃ /s - Gambar jadi stiker\n' +
+    '┃ /toimg - Stiker jadi gambar\n' +
+    '┃ /tovideo - Video jadi stiker animasi\n' +
+    '┃ /toaudio - Video jadi audio\n' +
+    '┃ /tomp3 - Media jadi MP3\n' +
+    '┣━━〔 GROUP STATUS 〕\n' +
+    '┃ /swgc [teks] - Status WhatsApp grup\n' +
+    '┣━━〔 ADMIN 〕\n' +
+    '┃ /admin - Menu admin\n' +
+    '┃ /setrules - Ubah aturan (belum dibuat)\n' +
+    '┃ /setabout - Ubah tentang (belum dibuat)\n' +
+    '┃ /setsosial - Ubah sosial (belum dibuat)\n' +
+    '╰━━━━━━━━━━━━';
+  break;
 
         case '/aturan':
         case '/rule':
