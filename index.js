@@ -1,4 +1,4 @@
-import makeWASocket, {
+eimport makeWASocket, {
   useMultiFileAuthState,
   downloadMediaMessage,
   Browsers,
@@ -350,6 +350,7 @@ sock.ev.on('group-participants.update', async (update) => {
  
   sock.ev.on('creds.update', saveCreds);
 
+
 sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
     if (connection === 'open') {
         console.log('✅ WhatsApp terhubung!');
@@ -358,23 +359,18 @@ sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
 
     if (connection !== 'close') return;
 
-    const statusCode =
-        lastDisconnect?.error?.output?.statusCode;
+    const statusCode = lastDisconnect?.error?.output?.statusCode;
 
     console.log('❌ Koneksi terputus. Kode:', statusCode);
 
-    if (statusCode === 401) {
-        console.log('⚠️ Sesi ditolak. Periksa autentikasi WhatsApp.');
+    if (statusCode === 401 || statusCode === 403) {
+        console.log('⚠️ Sesi ditolak atau akses ditolak.');
+        console.log('Periksa autentikasi WhatsApp sebelum mencoba lagi.');
         return;
     }
 
     if (statusCode === 515) {
         console.log('🔄 WhatsApp meminta socket dibuat ulang.');
-    }
-
-    if (statusCode === 403) {
-        console.log('⚠️ Akses ditolak. Periksa sesi dan autentikasi.');
-        return;
     }
 
     setTimeout(() => {
@@ -383,7 +379,14 @@ sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
         });
     }, 5000);
 });
+
   
+if (!state.creds.registered) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
   try {
     const nomor = (
       await rl.question('Nomor WhatsApp (contoh 62812xxxx): ')
@@ -393,18 +396,12 @@ sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
       throw new Error('Format nomor tidak valid. Gunakan format 62...');
     }
 
-    console.log('Menghubungkan ke WhatsApp...');
-
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
     const kode = await sock.requestPairingCode(nomor);
 
     console.log('\nKode pairing:', kode);
     console.log('Buka WhatsApp > Perangkat tertaut > Tautkan perangkat.');
-    console.log('Pilih opsi tautkan dengan nomor telepon, lalu masukkan kode.');
   } catch (error) {
     console.error('Pairing gagal:', error.message);
-    console.error('Periksa log koneksi di atas untuk mengetahui penyebabnya.');
   } finally {
     rl.close();
   }
@@ -613,5 +610,6 @@ case '/swgc': {
       await sock.sendMessage(jid, { text: balasan });
     }
   });
+}
 
 startBot().catch(console.error);
