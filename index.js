@@ -16,7 +16,6 @@ const execFileAsync = promisify(execFile);
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
-import { execFile } from 'node:child_process';
 import pino from "pino";
 import readline from "node:readline/promises";
 
