@@ -1,8 +1,11 @@
 import makeWASocket, {
   useMultiFileAuthState,
   downloadMediaMessage,
-  Browsers
+  Browsers,
+  generateWAMessageFromContent
 } from '@whiskeysockets/baileys';
+
+import crypto from 'node:crypto';
 
 
 import os from 'node:os';
@@ -495,37 +498,59 @@ case '/tomp3': {
           
 case '/swgc': {
   if (!jid.endsWith('@g.us')) {
-    balasan = '❌ Command ini hanya bisa digunakan di grup.';
+    balasan = '❌ Gunakan command ini di dalam grup.';
+    break;
+  }
+
+  const statusText = isi.slice(cmd.length).trim();
+
+  if (!statusText) {
+    balasan = 'Gunakan: /swgc teks status kamu';
     break;
   }
 
   try {
-    const metadata = await sock.groupMetadata(jid);
-    const admins = metadata.participants
-      .filter(p => p.admin)
-      .map(p => `• @${p.id.split('@')[0]}`);
+    const messageSecret = crypto.randomBytes(32);
 
-    balasan =
-      `📊 STATUS GRUP\n\n` +
-      `👥 Nama: ${metadata.subject}\n` +
-      `🆔 ID: ${metadata.id}\n` +
-      `👤 Anggota: ${metadata.participants.length}\n` +
-      `📝 Deskripsi: ${metadata.desc || 'Belum ada'}\n\n` +
-      `🛡️ Admin:\n${admins.join('\n') || 'Tidak diketahui'}`;
+    const generated = generateWAMessageFromContent(
+      jid,
+      {
+        messageContextInfo: {
+          messageSecret
+        },
+        groupStatusMessageV2: {
+          message: {
+            extendedTextMessage: {
+              text: statusText,
+              contextInfo: {
+                isGroupStatus: true
+              }
+            },
+            messageContextInfo: {
+              messageSecret
+            }
+          }
+        }
+      },
+      {
+        userJid: sock.user.id
+      }
+    );
 
-    await sock.sendMessage(jid, {
-      text: balasan,
-      mentions: metadata.participants
-        .filter(p => p.admin)
-        .map(p => p.id)
-    }, { quoted: msg });
+    await sock.relayMessage(
+      jid,
+      generated.message,
+      { messageId: generated.key.id }
+    );
 
-    continue;
   } catch (error) {
-    balasan = '❌ Gagal mengambil informasi grup.';
+    console.error('SWGC error:', error);
+
+    balasan = `❌ Gagal mengirim Status Grup: ${error.message}`;
+    break;
   }
 
-  break;
+  continue;
 }
 
 
