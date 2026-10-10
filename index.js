@@ -11,8 +11,6 @@ import sharp from 'sharp';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
-const execFileAsync = promisify(execFile);
-
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
