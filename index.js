@@ -353,27 +353,35 @@ sock.ev.on('group-participants.update', async (update) => {
 sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
     if (connection === 'open') {
         console.log('✅ WhatsApp terhubung!');
+        return;
     }
 
-    if (connection === 'close') {
-        const statusCode =
-            lastDisconnect?.error?.output?.statusCode;
+    if (connection !== 'close') return;
 
-        console.log('❌ Koneksi terputus. Kode:', statusCode);
+    const statusCode =
+        lastDisconnect?.error?.output?.statusCode;
 
-        if (statusCode === 401) {
-            console.log('⚠️ Sesi perlu diperiksa atau ditautkan ulang.');
-            return;
-        }
+    console.log('❌ Koneksi terputus. Kode:', statusCode);
 
-        if (statusCode === 515) {
-            console.log('🔄 Server meminta socket dibuat ulang.');
-        }
-
-        setTimeout(() => {
-            startBot().catch(console.error);
-        }, 3000);
+    if (statusCode === 401) {
+        console.log('⚠️ Sesi ditolak. Periksa autentikasi WhatsApp.');
+        return;
     }
+
+    if (statusCode === 515) {
+        console.log('🔄 WhatsApp meminta socket dibuat ulang.');
+    }
+
+    if (statusCode === 403) {
+        console.log('⚠️ Akses ditolak. Periksa sesi dan autentikasi.');
+        return;
+    }
+
+    setTimeout(() => {
+        startBot().catch(error => {
+            console.error('Reconnect gagal:', error);
+        });
+    }, 5000);
 });
   
   try {
