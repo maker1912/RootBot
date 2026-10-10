@@ -209,10 +209,10 @@ async function getMediaBuffer(sock, msg) {
   return { buffer, type };
 }
 
+
 async function convertMedia(sock, msg, mode) {
   const { buffer, type } = await getMediaBuffer(sock, msg);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'varze-'));
-
   const input = path.join(dir, 'input');
   const output = path.join(dir, 'output');
 
@@ -220,24 +220,16 @@ async function convertMedia(sock, msg, mode) {
     fs.writeFileSync(input, buffer);
 
     if (mode === 'sticker' && type === 'imageMessage') {
-      await sharp(buffer)
-        .resize(512, 512, {
-          fit: 'contain',
-          background: { r: 0, g: 0, b: 0, alpha: 0 }
-        })
-        .webp({ quality: 80 })
-        .toFile(output);
+      await execFileAsync('ffmpeg', [
+        '-y', '-i', input,
+        '-vf',
+        'scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x00000000',
+        '-vcodec', 'libwebp', '-q:v', '75', '-an',
+        output + '.webp'
+      ], { timeout: 120000 });
 
       await sock.sendMessage(msg.key.remoteJid, {
-        sticker: fs.readFileSync(output)
-      }, { quoted: msg });
-
-    } else if (mode === 'image' && type === 'stickerMessage') {
-      await sharp(buffer).png().toFile(output);
-
-      await sock.sendMessage(msg.key.remoteJid, {
-        image: fs.readFileSync(output),
-        caption: '✅ Stiker dikonversi menjadi gambar.'
+        sticker: fs.readFileSync(output + '.webp')
       }, { quoted: msg });
 
     } else if (mode === 'animated' && type === 'videoMessage') {
@@ -246,11 +238,8 @@ async function convertMedia(sock, msg, mode) {
         '-t', '6',
         '-vf',
         'fps=15,scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x00000000',
-        '-an',
-        '-loop', '0',
-        '-c:v', 'libwebp',
-        '-quality', '65',
-        output + '.webp'
+        '-an', '-vcodec', 'libwebp', '-loop', '0',
+        '-q:v', '65', output + '.webp'
       ], { timeout: 120000 });
 
       await sock.sendMessage(msg.key.remoteJid, {
@@ -258,34 +247,34 @@ async function convertMedia(sock, msg, mode) {
         isAnimated: true
       }, { quoted: msg });
 
-    } else if (mode === 'audio' && type === 'videoMessage') {
+    } else if (mode === 'image' && type === 'stickerMessage') {
       await execFileAsync('ffmpeg', [
-        '-y', '-i', input,
-        '-vn', '-codec:a', 'libmp3lame',
-        '-b:a', '128k',
-        output + '.mp3'
+        '-y', '-i', input, '-frames:v', '1', output + '.png'
       ], { timeout: 120000 });
 
       await sock.sendMessage(msg.key.remoteJid, {
-        audio: fs.readFileSync(output + '.mp3'),
-        mimetype: 'audio/mpeg'
+        image: fs.readFileSync(output + '.png'),
+        caption: '✅ Stiker dikonversi menjadi gambar.'
       }, { quoted: msg });
 
-    } else if (mode === 'mp3' && type === 'audioMessage') {
+    } else if (
+      (mode === 'audio' && type === 'videoMessage') ||
+      (mode === 'mp3' && ['audioMessage', 'videoMessage'].includes(type))
+    ) {
       await execFileAsync('ffmpeg', [
-        '-y', '-i', input,
-        '-codec:a', 'libmp3lame',
-        '-b:a', '128k',
+        '-y', '-i', input, '-vn',
+        '-codec:a', 'libmp3lame', '-b:a', '128k',
         output + '.mp3'
       ], { timeout: 120000 });
 
       await sock.sendMessage(msg.key.remoteJid, {
         audio: fs.readFileSync(output + '.mp3'),
-        mimetype: 'audio/mpeg'
+        mimetype: 'audio/mpeg',
+        fileName: 'audio.mp3'
       }, { quoted: msg });
 
     } else {
-      throw new Error('Jenis media tidak cocok dengan converter ini.');
+      throw new Error('Jenis media tidak cocok. Balas media yang sesuai.');
     }
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
