@@ -339,7 +339,18 @@ sock.ev.on('group-participants.update', async update => {
 });
 
 
+ 
   sock.ev.on('creds.update', saveCreds);
+
+  sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+    if (connection === 'open') {
+      console.log('Bot berhasil terhubung!');
+    }
+
+    if (connection === 'close') {
+      console.log('Koneksi terputus:', lastDisconnect?.error?.message || 'Alasan tidak diketahui');
+    }
+  });
 
   if (!state.creds.registered) {
     const rl = readline.createInterface({
@@ -347,29 +358,28 @@ sock.ev.on('group-participants.update', async update => {
       output: process.stdout
     });
 
-    const nomor = await rl.question(
-      'Nomor WhatsApp (contoh 62812xxxx): '
-    );
+    try {
+      const nomor = (await rl.question(
+        'Nomor WhatsApp (contoh 62812xxxx): '
+      )).trim().replace(/\D/g, '');
 
-    rl.close();
+      if (!/^62\d{8,15}$/.test(nomor)) {
+        console.log('Format nomor tidak valid. Gunakan format 628xxxxxxxxxx.');
+        return;
+      }
 
-    const kode = await sock.requestPairingCode(
-      nomor.replace(/\D/g, '')
-    );
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-    console.log('Kode pairing:', kode);
-    console.log('Masukkan kode di WhatsApp kamu.');
+      const kode = await sock.requestPairingCode(nomor);
+      console.log('Kode pairing:', kode);
+      console.log('Masukkan kode di WhatsApp kamu.');
+    } catch (error) {
+      console.error('Gagal meminta kode pairing:', error.message);
+    } finally {
+      rl.close();
+    }
   }
 
-  sock.ev.on('connection.update', ({ connection }) => {
-    if (connection === 'open') {
-      console.log('Bot berhasil terhubung!');
-    }
-
-    if (connection === 'close') {
-      console.log('Koneksi terputus. Jalankan ulang bot.');
-    }
-  });
 
 
   sock.ev.on('messages.upsert', async ({ messages }) => {
