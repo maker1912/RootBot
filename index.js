@@ -75,14 +75,18 @@ const UPDATE_INTERVAL = 60_000;
 
 let updatePromptActive = false;
 
+
 async function checkGitHubUpdate() {
   if (updatePromptActive) return;
 
   try {
     const { stdout: remoteCommit } = await execFileAsync(
       'git',
-      ['ls-remote', `https://github.com/${UPDATE_REPO}.git`,
-       `refs/heads/${UPDATE_BRANCH}`],
+      [
+        'ls-remote',
+        `https://github.com/${UPDATE_REPO}.git`,
+        `refs/heads/${UPDATE_BRANCH}`
+      ],
       { timeout: 15000 }
     );
 
@@ -92,6 +96,11 @@ async function checkGitHubUpdate() {
     const { stdout: localCommit } = await execFileAsync(
       'git',
       ['rev-parse', 'HEAD']
+    );
+
+    const { stdout: currentFile } = await execFileAsync(
+      'git',
+      ['show', 'HEAD:index.js']
     );
 
     if (latestCommit === localCommit.trim()) return;
@@ -108,7 +117,7 @@ async function checkGitHubUpdate() {
     });
 
     const answer = (
-      await rl.question('Update sekarang? (y/n): ')
+      await rl.question('Update index.js sekarang? (y/n): ')
     ).trim().toLowerCase();
 
     rl.close();
@@ -119,38 +128,41 @@ async function checkGitHubUpdate() {
       return;
     }
 
-    console.log('Mengambil update dari GitHub...');
+    await execFileAsync('git', ['fetch', 'origin', UPDATE_BRANCH]);
 
-    // Pastikan tidak ada perubahan lokal yang akan tertimpa.
-    const { stdout: status } = await execFileAsync(
+    const { stdout: remoteFile } = await execFileAsync(
       'git',
-      ['status', '--porcelain']
+      ['show', `origin/${UPDATE_BRANCH}:index.js`]
     );
 
-    // Hanya menerima update fast-forward.
- 
-await execFileAsync('git', ['fetch', 'origin', 'main']);
+    const fsPromises = await import('node:fs/promises');
 
-const { stdout } = await execFileAsync(
-  'git',
-  ['show', 'origin/main:index.js']
-);
+    await fsPromises.copyFile('index.js', 'index.js.backup');
+    await fsPromises.writeFile('index.js', remoteFile, 'utf8');
 
-const fs = await import('node:fs/promises');
+    console.log('index.js berhasil diperbarui.');
+    console.log('Restart bot untuk menerapkan update.');
 
-// Backup kode sebelum menggantinya
-await fs.copyFile('index.js', 'index.js.backup');
+    const { spawn } = await import('node:child_process');
+    const child = spawn(
+      process.execPath,
+      ['index.js'],
+      { stdio: 'inherit' }
+    );
 
-// Tulis versi terbaru dari GitHub
-await fs.writeFile('index.js', stdout, 'utf8');
+    child.on('error', error => {
+      console.error('Gagal restart:', error.message);
+    });
 
-console.log('index.js berhasil diperbarui!');
-console.log('Restart bot untuk menerapkan update.');
+    process.exit(0);
+  } catch (error) {
+    console.error('Updater error:', error.message);
+    updatePromptActive = false;
+  }
+}
 
-
-setInterval(checkGitHubUpdate, UPDATE_INTERVAL);
 setTimeout(checkGitHubUpdate, 5000);
-
+setInterval(checkGitHubUpdate, UPDATE_INTERVAL);
 
 async function startBot() {
   const { state, saveCreds } =
@@ -279,9 +291,6 @@ async function startBot() {
               `🌐 Alamat: ${address}\n` +
               `API tidak dapat memberikan status. Coba lagi nanti.`;
           }
-
-          break;
-        }
 
           break;
         }
