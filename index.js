@@ -11,12 +11,6 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
-const BOT_NAME = 'VARZE BOT';
-const SERVER_NAME = 'Rootakses SMP';
-
-const SERVER_IP = 'play.rootakses.my.id';
-const SERVER_PORT = 23719;
-
 const OWNER_NUMBER = '628561411054';
 
 const RULES = `
