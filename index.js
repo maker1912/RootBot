@@ -155,8 +155,4 @@ async function startBot() {
     }
   });
 
-    }
-  });
-}
-
 startBot().catch(console.error);
