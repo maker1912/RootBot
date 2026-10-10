@@ -695,66 +695,58 @@ case '/swgc': {
 
 
 
+
 case '/bratvid': {
-    const bratText = text
-    .trim()
-    .split(/\s+/)
-    .slice(1)
-    .join(' ');
+    const bratText = isi.trim().split(/\s+/).slice(1).join(' ');
 
     if (!bratText) {
-        await sock.sendMessage(m.chat, {
+        await sock.sendMessage(jid, {
             text: 'Contoh: /bratvid halo dunia'
-        }, { quoted: m });
+        }, { quoted: msg });
         break;
     }
 
     try {
         const sticker = await createBratVideoSticker(bratText);
 
-        await sock.sendMessage(m.chat, {
-            sticker
-        }, { quoted: m });
+        await sock.sendMessage(jid, {
+            sticker: sticker
+        }, { quoted: msg });
     } catch (error) {
         console.error('BRATVID error:', error);
 
-        await sock.sendMessage(m.chat, {
-            text: 'Gagal membuat stiker BRAT animasi.'
-        }, { quoted: m });
+        await sock.sendMessage(jid, {
+            text: 'Gagal membuat stiker BRATVID.'
+        }, { quoted: msg });
     }
 
     break;
 }
 
 
+
 case '/brat': {
-    const bratText = args.join(' ').trim();
+    const bratText = isi.trim().split(/\s+/).slice(1).join(' ');
 
     if (!bratText) {
-        await sock.sendMessage(m.chat, {
-            text: 'Contoh penggunaan: /brat halo dunia'
-        }, {
-            quoted: m
-        });
+        await sock.sendMessage(jid, {
+            text: 'Contoh: /brat halo dunia'
+        }, { quoted: msg });
         break;
     }
 
     try {
         const sticker = await createBratSticker(bratText);
 
-        await sock.sendMessage(m.chat, {
+        await sock.sendMessage(jid, {
             sticker: sticker
-        }, {
-            quoted: m
-        });
+        }, { quoted: msg });
     } catch (error) {
-        console.error('BRAT sticker error:', error);
+        console.error('BRAT error:', error);
 
-        await sock.sendMessage(m.chat, {
-            text: 'Gagal membuat stiker BRAT. Coba lagi.'
-        }, {
-            quoted: m
-        });
+        await sock.sendMessage(jid, {
+            text: 'Gagal membuat stiker BRAT.'
+        }, { quoted: msg });
     }
 
     break;
