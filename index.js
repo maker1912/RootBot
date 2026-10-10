@@ -127,71 +127,26 @@ async function checkGitHubUpdate() {
       ['status', '--porcelain']
     );
 
-    if (status.trim()) {
-      console.log(
-        'Update dibatalkan: ada perubahan lokal atau file belum dilacak.'
-      );
-      console.log('Simpan atau commit perubahan lokal terlebih dahulu.');
-      updatePromptActive = false;
-      return;
-    }
-
     // Hanya menerima update fast-forward.
-    await execFileAsync('git', ['fetch', 'origin', UPDATE_BRANCH]);
+ 
+await execFileAsync('git', ['fetch', 'origin', 'main']);
 
-    const { stdout: fetchedCommit } = await execFileAsync(
-      'git',
-      ['rev-parse', `origin/${UPDATE_BRANCH}`]
-    );
+const { stdout } = await execFileAsync(
+  'git',
+  ['show', 'origin/main:index.js']
+);
 
-    if (fetchedCommit.trim() !== latestCommit) {
-      console.log('GitHub berubah saat update. Coba lagi nanti.');
-      updatePromptActive = false;
-      return;
-    }
+const fs = await import('node:fs/promises');
 
-    // Pastikan perubahan hanya maju, bukan mengganti riwayat lokal.
-    const { stdout: ancestor } = await execFileAsync(
-      'git',
-      ['merge-base', 'HEAD', `origin/${UPDATE_BRANCH}`]
-    );
+// Backup kode sebelum menggantinya
+await fs.copyFile('index.js', 'index.js.backup');
 
-    if (ancestor.trim() !== localCommit.trim()) {
-      console.log(
-        'Update dibatalkan: riwayat Git berbeda atau ada commit lokal.'
-      );
-      updatePromptActive = false;
-      return;
-    }
+// Tulis versi terbaru dari GitHub
+await fs.writeFile('index.js', stdout, 'utf8');
 
-    // Simpan backup sebelum mengganti kode.
-    await execFileAsync('cp', ['index.js', 'index.js.backup']);
+console.log('index.js berhasil diperbarui!');
+console.log('Restart bot untuk menerapkan update.');
 
-    await execFileAsync(
-      'git',
-      ['merge', '--ff-only', `origin/${UPDATE_BRANCH}`]
-    );
-
-    console.log('Update berhasil. Memulai ulang bot...');
-
-    // Ganti proses Node.js saat ini dengan versi terbaru.
-    const { spawn } = await import('node:child_process');
-    const child = spawn(
-      process.execPath,
-      ['index.js'],
-      { stdio: 'inherit' }
-    );
-
-    child.on('error', (error) => {
-      console.error('Gagal menjalankan ulang bot:', error.message);
-    });
-
-    process.exit(0);
-  } catch (error) {
-    console.error('Updater error:', error.message);
-    updatePromptActive = false;
-  }
-}
 
 setInterval(checkGitHubUpdate, UPDATE_INTERVAL);
 setTimeout(checkGitHubUpdate, 5000);
