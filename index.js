@@ -296,42 +296,51 @@ syncFullHistory: false,
   keepAliveIntervalMs: 15000
 });
 
+sock.ev.on('group-participants.update', async (update) => {
+    try {
+        const config = JSON.parse(
+            fs.readFileSync('./config.json', 'utf8')
+        );
 
-  
-sock.ev.on('group-participants.update', async update => {
-  try {
-    const { id, participants, action } = update;
+        const metadata = await sock.groupMetadata(update.id);
 
-    if (action !== 'add' && action !== 'remove') return;
+        for (const item of update.participants) {
+            const participant =
+                typeof item === 'string' ? item : item.id;
 
-    const metadata = await sock.groupMetadata(id);
-    const isWelcome = action === 'add';
+            if (!participant) continue;
 
-    if (isWelcome && config.WELCOME_ENABLED === false) return;
-    if (!isWelcome && config.GOODBYE_ENABLED === false) return;
+            const number = participant.split('@')[0];
+            let message = '';
 
-    for (const participant of participants) {
-      const user = `@${participant.split('@')[0]}`;
+            if (
+                update.action === 'add' &&
+                config.WELCOME_ENABLED
+            ) {
+                message = config.WELCOME_MESSAGE ||
+                    'Selamat datang @user!';
+            } else if (
+                update.action === 'remove' &&
+                config.GOODBYE_ENABLED
+            ) {
+                message = config.GOODBYE_MESSAGE ||
+                    'Selamat tinggal @user!';
+            } else {
+                continue;
+            }
 
-      const template = isWelcome
-        ? config.WELCOME_MESSAGE
-        : config.GOODBYE_MESSAGE;
+            message = message
+                .replace(/@user/g, `@${number}`)
+                .replace(/@group/g, metadata.subject);
 
-      const text = String(template || '')
-        .replaceAll('{user}', user)
-        .replaceAll('{group}', metadata.subject)
-        .replaceAll('{count}', String(metadata.participants.length));
-
-      if (text.trim()) {
-        await sock.sendMessage(id, {
-          text,
-          mentions: [participant]
-        });
-      }
+            await sock.sendMessage(update.id, {
+                text: message,
+                mentions: [participant]
+            });
+        }
+    } catch (error) {
+        console.error('Welcome/goodbye:', error);
     }
-  } catch (error) {
-    console.error('Welcome/goodbye:', error.message);
-  }
 });
 
 
