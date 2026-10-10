@@ -6,6 +6,12 @@ import makeWASocket, {
 import pino from 'pino';
 import readline from 'node:readline/promises';
 
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import readline from 'node:readline/promises';
+
+const execFileAsync = promisify(execFile);
+
 const BOT_NAME = 'VARZE BOT';
 const SERVER_NAME = 'Rootakses SMP';
 
@@ -33,6 +39,24 @@ WhatsApp: https://chat.whatsapp.com/CONTOH
 YouTube: https://youtube.com/@CONTOH
 Discord: https://discord.gg/CONTOH
 `;
+
+import fs from 'node:fs';
+
+const config = JSON.parse(
+  fs.readFileSync('./config.json', 'utf8')
+);
+
+const BOT_NAME = config.BOT_NAME;
+const SERVER_NAME = config.SERVER_NAME;
+const SERVER_IP = config.SERVER_IP;
+const SERVER_PORT = config.SERVER_PORT;
+const OWNER_NUMBER = config.OWNER_NUMBER;
+const RULES = config.RULES.join('\n');
+const ABOUT = config.ABOUT;
+
+const SOCIALS = Object.entries(config.SOCIALS)
+  .map(([name, url]) => `${name}: ${url}`)
+  .join('\n');
 
 
 async function checkBedrockServer(address) {
@@ -72,6 +96,134 @@ async function getPingMessage(address, label) {
     `🎮 Versi: ${data.version || 'Tidak diketahui'}`
   );
 }
+
+
+const UPDATE_REPO = 'maker1912/rootbot';
+const UPDATE_BRANCH = 'main';
+const UPDATE_INTERVAL = 60_000;
+
+let updatePromptActive = false;
+
+async function checkGitHubUpdate() {
+  if (updatePromptActive) return;
+
+  try {
+    const { stdout: remoteCommit } = await execFileAsync(
+      'git',
+      ['ls-remote', `https://github.com/${UPDATE_REPO}.git`,
+       `refs/heads/${UPDATE_BRANCH}`],
+      { timeout: 15000 }
+    );
+
+    const latestCommit = remoteCommit.trim().split(/\s+/)[0];
+    if (!latestCommit) return;
+
+    const { stdout: localCommit } = await execFileAsync(
+      'git',
+      ['rev-parse', 'HEAD']
+    );
+
+    if (latestCommit === localCommit.trim()) return;
+
+    updatePromptActive = true;
+
+    console.log('\n🔔 UPDATE TERSEDIA!');
+    console.log('Commit lokal :', localCommit.trim().slice(0, 7));
+    console.log('Commit GitHub:', latestCommit.slice(0, 7));
+
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    const answer = (
+      await rl.question('Update sekarang? (y/n): ')
+    ).trim().toLowerCase();
+
+    rl.close();
+
+    if (answer !== 'y') {
+      console.log('Update ditunda.');
+      updatePromptActive = false;
+      return;
+    }
+
+    console.log('Mengambil update dari GitHub...');
+
+    // Pastikan tidak ada perubahan lokal yang akan tertimpa.
+    const { stdout: status } = await execFileAsync(
+      'git',
+      ['status', '--porcelain']
+    );
+
+    if (status.trim()) {
+      console.log(
+        'Update dibatalkan: ada perubahan lokal atau file belum dilacak.'
+      );
+      console.log('Simpan atau commit perubahan lokal terlebih dahulu.');
+      updatePromptActive = false;
+      return;
+    }
+
+    // Hanya menerima update fast-forward.
+    await execFileAsync('git', ['fetch', 'origin', UPDATE_BRANCH]);
+
+    const { stdout: fetchedCommit } = await execFileAsync(
+      'git',
+      ['rev-parse', `origin/${UPDATE_BRANCH}`]
+    );
+
+    if (fetchedCommit.trim() !== latestCommit) {
+      console.log('GitHub berubah saat update. Coba lagi nanti.');
+      updatePromptActive = false;
+      return;
+    }
+
+    // Pastikan perubahan hanya maju, bukan mengganti riwayat lokal.
+    const { stdout: ancestor } = await execFileAsync(
+      'git',
+      ['merge-base', 'HEAD', `origin/${UPDATE_BRANCH}`]
+    );
+
+    if (ancestor.trim() !== localCommit.trim()) {
+      console.log(
+        'Update dibatalkan: riwayat Git berbeda atau ada commit lokal.'
+      );
+      updatePromptActive = false;
+      return;
+    }
+
+    // Simpan backup sebelum mengganti kode.
+    await execFileAsync('cp', ['index.js', 'index.js.backup']);
+
+    await execFileAsync(
+      'git',
+      ['merge', '--ff-only', `origin/${UPDATE_BRANCH}`]
+    );
+
+    console.log('Update berhasil. Memulai ulang bot...');
+
+    // Ganti proses Node.js saat ini dengan versi terbaru.
+    const { spawn } = await import('node:child_process');
+    const child = spawn(
+      process.execPath,
+      ['index.js'],
+      { stdio: 'inherit' }
+    );
+
+    child.on('error', (error) => {
+      console.error('Gagal menjalankan ulang bot:', error.message);
+    });
+
+    process.exit(0);
+  } catch (error) {
+    console.error('Updater error:', error.message);
+    updatePromptActive = false;
+  }
+}
+
+setInterval(checkGitHubUpdate, UPDATE_INTERVAL);
+setTimeout(checkGitHubUpdate, 5000);
 
 
 async function startBot() {
