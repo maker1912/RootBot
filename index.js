@@ -1,8 +1,6 @@
 import makeWASocket, {
   useMultiFileAuthState,
   downloadMediaMessage,
-  browser: Browsers.ubuntu('Chrome'),
-syncFullHistory: false,
 } from '@whiskeysockets/baileys';
 
 
@@ -290,7 +288,8 @@ async function startBot() {
 const sock = makeWASocket({
   auth: state,
   logger: pino({ level: 'silent' }),
-  browser: Browsers.macOS('Desktop'),
+  browser: Browsers.ubuntu('Chrome'),
+syncFullHistory: false,
   connectTimeoutMs: 60000,
   defaultQueryTimeoutMs: 60000,
   keepAliveIntervalMs: 15000
