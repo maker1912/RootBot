@@ -735,10 +735,31 @@ case '/brat': {
 
     try {
         const sticker = await createBratSticker(bratText);
-}
- if (balasan && balasan.trim() !== '') {
-    await sock.sendMessage(jid, { text: balasan });
-}
+
+case '/brat': {
+    const bratText = isi.trim().split(/\s+/).slice(1).join(' ');
+
+    if (!bratText) {
+        await sock.sendMessage(jid, {
+            text: 'Contoh: /brat halo dunia'
+        }, { quoted: msg });
+        break;
+    }
+
+    try {
+        const sticker = await createBratSticker(bratText);
+
+        await sock.sendMessage(jid, {
+            sticker: sticker
+        }, { quoted: msg });
+    } catch (error) {
+        console.error('BRAT error:', error);
+
+        await sock.sendMessage(jid, {
+            text: 'Gagal membuat stiker BRAT.'
+        }, { quoted: msg });
+    }
+
     break;
 }
 
