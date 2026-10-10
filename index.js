@@ -34,6 +34,46 @@ YouTube: https://youtube.com/@CONTOH
 Discord: https://discord.gg/CONTOH
 `;
 
+
+async function checkBedrockServer(address) {
+  const url =
+    `https://api.mcsrvstat.us/bedrock/3/${encodeURIComponent(address)}`;
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'VARZE-BOT/1.0'
+    },
+    signal: AbortSignal.timeout(15000)
+  });
+
+  if (!response.ok) {
+    throw new Error(`API HTTP ${response.status}`);
+  }
+
+  return await response.json();
+}
+
+async function getPingMessage(address, label) {
+  const data = await checkBedrockServer(address);
+
+  if (!data.online) {
+    return (
+      `🏓 CEK SERVER ${label}\n\n` +
+      `🌐 Alamat: ${address}\n` +
+      `🔴 Status: Offline atau tidak terjangkau`
+    );
+  }
+
+  return (
+    `🏓 STATUS SERVER ${label}\n\n` +
+    `🌐 Alamat: ${data.hostname || data.ip || address}:${data.port || ''}\n` +
+    `🟢 Status: Online\n` +
+    `👥 Pemain: ${data.players?.online ?? '?'} / ${data.players?.max ?? '?'}\n` +
+    `🎮 Versi: ${data.version || 'Tidak diketahui'}`
+  );
+}
+
+
 async function startBot() {
   const { state, saveCreds } =
     await useMultiFileAuthState('./session');
@@ -139,13 +179,26 @@ async function startBot() {
             '/setsosial - (fitur belum dibuat)';
           break;
 
-        case '/ping':
-          balasan =
-            `🏓 PING SERVER\n` +
-            `Server: ${SERVER_NAME}\n` +
-            `Alamat: ${SERVER_IP}:${SERVER_PORT}\n` +
-            'Pemeriksaan ping server belum diaktifkan.';
+
+        case '/ping': {
+          const args = isi.trim().split(/\s+/);
+          const address = args[1] || `${SERVER_IP}:${SERVER_PORT}`;
+          const label = args[1] ? 'SERVER TARGET' : SERVER_NAME;
+
+          try {
+            balasan = await getPingMessage(address, label);
+          } catch (error) {
+            console.error('Gagal mengecek server:', error.message);
+
+            balasan =
+              `❌ Gagal mengecek server.\n` +
+              `🌐 Alamat: ${address}\n` +
+              `Coba lagi nanti atau periksa alamat server.`;
+          }
+
           break;
+        }
+
 
         default:
           continue;
