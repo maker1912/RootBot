@@ -1,7 +1,7 @@
 import makeWASocket, {
   useMultiFileAuthState,
   downloadMediaMessage,
-  browser,
+  browsers
 } from '@whiskeysockets/baileys';
 
 
