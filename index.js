@@ -694,6 +694,7 @@ case '/swgc': {
 
 
 
+
 case '/bratvid': {
     const bratText = isi.trim().split(/\s+/).slice(1).join(' ');
 
@@ -707,13 +708,19 @@ case '/bratvid': {
     try {
         const sticker = await createBratVideoSticker(bratText);
 
-if (balasan && balasan.trim() !== '') {
-    await sock.sendMessage(jid, { text: balasan });
-}
+        await sock.sendMessage(jid, {
+            sticker: sticker
+        }, { quoted: msg });
+    } catch (error) {
+        console.error('BRATVID error:', error);
+
+        await sock.sendMessage(jid, {
+            text: 'Gagal membuat stiker BRATVID.'
+        }, { quoted: msg });
+    }
 
     break;
 }
-
 
 
 case '/brat': {
@@ -729,17 +736,9 @@ case '/brat': {
     try {
         const sticker = await createBratSticker(bratText);
 
-        await sock.sendMessage(jid, {
-            sticker: sticker
-        }, { quoted: msg });
-    } catch (error) {
-        console.error('BRAT error:', error);
-
-        await sock.sendMessage(jid, {
-            text: 'Gagal membuat stiker BRAT.'
-        }, { quoted: msg });
-    }
-
+ if (balasan && balasan.trim() !== '') {
+    await sock.sendMessage(jid, { text: balasan });
+}
     break;
 }
 
