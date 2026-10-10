@@ -1,0 +1,6 @@
+config.json
+session/
+node_modules/
+package.json
+package-lock.json
+index.js.backup
