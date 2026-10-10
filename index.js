@@ -735,7 +735,7 @@ case '/brat': {
 
     try {
         const sticker = await createBratSticker(bratText);
-
+}
  if (balasan && balasan.trim() !== '') {
     await sock.sendMessage(jid, { text: balasan });
 }
