@@ -47,36 +47,56 @@ function escapeXml(text) {
 }
 
 
-async function createBratSticker(text) {
-    const sharp = require('sharp');
 
-    const safeText = String(text)
+async function createBratSticker(text) {
+    const input = String(text || '').trim();
+    if (!input) throw new Error('Teks BRAT kosong');
+
+    const escaped = input
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&apos;');
 
+    const words = escaped.split(/\s+/);
+    const lines = [];
+    let line = '';
+
+    for (const word of words) {
+        const candidate = line ? line + ' ' + word : word;
+
+        if (candidate.length > 13 && line) {
+            lines.push(line);
+            line = word;
+        } else {
+            line = candidate;
+        }
+    }
+
+    if (line) lines.push(line);
+
+    const fontSize = Math.min(64, Math.floor(420 / Math.max(...lines.map(l => l.length), 1) * 1.7));
+    const lineHeight = Math.min(fontSize * 1.15, 72);
+    const startY = (512 - (lines.length - 1) * lineHeight) / 2;
+
+    const textSvg = lines.map((item, i) =>
+        `<text x="256" y="${startY + i * lineHeight}" text-anchor="middle"
+        dominant-baseline="middle" font-family="Arial, sans-serif"
+        font-size="${fontSize}" font-weight="900" fill="#000">${item}</text>`
+    ).join('');
+
     const svg = `
-    <svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-        <rect width="512" height="512" fill="white"/>
-        <foreignObject x="35" y="35" width="442" height="442">
-            <div xmlns="http://www.w3.org/1999/xhtml"
-                style="width:442px;height:442px;display:flex;
-                align-items:center;justify-content:center;
-                text-align:center;overflow:hidden;
-                font-family:Arial,sans-serif;font-size:64px;
-                font-weight:900;line-height:1.05;
-                color:#000;overflow-wrap:break-word;">
-                ${safeText}
-            </div>
-        </foreignObject>
+    <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
+        <rect width="512" height="512" fill="#fff"/>
+        ${textSvg}
     </svg>`;
 
     return await sharp(Buffer.from(svg))
         .webp({ quality: 90 })
         .toBuffer();
 }
+
 
 
 
