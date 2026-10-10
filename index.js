@@ -722,20 +722,6 @@ case '/bratvid': {
     break;
 }
 
-
-case '/brat': {
-    const bratText = isi.trim().split(/\s+/).slice(1).join(' ');
-
-    if (!bratText) {
-        await sock.sendMessage(jid, {
-            text: 'Contoh: /brat halo dunia'
-        }, { quoted: msg });
-        break;
-    }
-
-    try {
-        const sticker = await createBratSticker(bratText);
-
 case '/brat': {
     const bratText = isi.trim().split(/\s+/).slice(1).join(' ');
 
