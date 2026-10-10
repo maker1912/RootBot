@@ -338,16 +338,22 @@ sock.ev.on('group-participants.update', async update => {
  
   sock.ev.on('creds.update', saveCreds);
 
-sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
-    if (connection === 'open') {
-        console.log('✅ Bot berhasil terhubung!');
+sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
+    if (connection === 'close') {
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+
+        console.log('❌ Koneksi terputus');
+        console.log('Kode:', statusCode);
+
+        if (statusCode === 515) {
+            console.log('🔄 WhatsApp meminta restart socket...');
+            startBot();
+            return;
+        }
     }
 
-    if (connection === 'close') {
-        const error = lastDisconnect?.error;
-        console.log('❌ Koneksi terputus');
-        console.log('Alasan:', error?.message || 'Tidak diketahui');
-        console.log('Kode:', error?.output?.statusCode || 'Tidak diketahui');
+    if (connection === 'open') {
+        console.log('✅ WhatsApp berhasil terhubung!');
     }
 });
 
