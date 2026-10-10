@@ -5,7 +5,6 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 
 
-import sharp from 'sharp';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
