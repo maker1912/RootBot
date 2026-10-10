@@ -393,20 +393,6 @@ if (!state.creds.registered) {
 }
 
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const kode = await sock.requestPairingCode(nomor);
-      console.log('Kode pairing:', kode);
-      console.log('Masukkan kode di WhatsApp kamu.');
-    } catch (error) {
-      console.error('Gagal meminta kode pairing:', error.message);
-    } finally {
-      rl.close();
-    }
-  }
-
-
-
   sock.ev.on('messages.upsert', async ({ messages }) => {
     for (const msg of messages) {
       if (!msg.message || msg.key.fromMe) continue;
