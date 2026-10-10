@@ -349,15 +349,18 @@ sock.ev.on('group-participants.update', async update => {
  
   sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
     if (connection === 'open') {
-      console.log('Bot berhasil terhubung!');
+        console.log('✅ Bot berhasil terhubung!');
     }
 
     if (connection === 'close') {
-      console.log('Koneksi terputus:', lastDisconnect?.error?.message || 'Alasan tidak diketahui');
+        const error = lastDisconnect?.error;
+        console.log('❌ Koneksi terputus');
+        console.log('Alasan:', error?.message || 'Tidak diketahui');
+        console.log('Kode:', error?.output?.statusCode || 'Tidak diketahui');
     }
-  });
+});
 
   
 if (!state.creds.registered) {
