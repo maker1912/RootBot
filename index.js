@@ -7,7 +7,6 @@ import makeWASocket, {
 
 import crypto from 'node:crypto';
 
-const OWNER_NAME = config.OWNER_NAME || 'Owner';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -23,6 +22,7 @@ const config = JSON.parse(
 );
 
 const BOT_NAME = config.BOT_NAME;
+const OWNER_NAME = config.OWNER_NAME || 'Owner';
 const SERVER_NAME = config.SERVER_NAME;
 const SERVER_IP = config.SERVER_IP;
 const SERVER_PORT = config.SERVER_PORT;
