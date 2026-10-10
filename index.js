@@ -46,60 +46,38 @@ function escapeXml(text) {
         .replace(/'/g, '&apos;');
 }
 
+
 async function createBratSticker(text) {
-    text = text.trim().slice(0, 250);
+    const sharp = require('sharp');
 
-    if (!text) {
-        throw new Error('Teks stiker kosong');
-    }
-
-    const words = text.split(/\s+/);
-    const lines = [];
-    let line = '';
-
-    for (const word of words) {
-        const next = line ? `${line} ${word}` : word;
-
-        if (next.length > 16 && line) {
-            lines.push(line);
-            line = word;
-        } else {
-            line = next;
-        }
-    }
-
-    if (line) lines.push(line);
-
-    const fontSize = Math.min(
-        54,
-        Math.max(20, Math.floor(380 / Math.max(
-            ...lines.map(line => line.length),
-            lines.length * 0.7
-        )))
-    );
-
-    const lineHeight = fontSize * 1.15;
-    const startY = 256 - ((lines.length - 1) * lineHeight) / 2;
-
-    const textSvg = lines.map((line, i) =>
-        `<text x="256" y="${startY + i * lineHeight}" ` +
-        `text-anchor="middle" dominant-baseline="middle" ` +
-        `font-family="Arial, sans-serif" font-weight="bold" ` +
-        `font-size="${fontSize}">${escapeXml(line)}</text>`
-    ).join('');
+    const safeText = String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
 
     const svg = `
-        <svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-            <rect width="512" height="512" fill="#ffffff"/>
-            ${textSvg}
-        </svg>
-    `;
+    <svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+        <rect width="512" height="512" fill="white"/>
+        <foreignObject x="35" y="35" width="442" height="442">
+            <div xmlns="http://www.w3.org/1999/xhtml"
+                style="width:442px;height:442px;display:flex;
+                align-items:center;justify-content:center;
+                text-align:center;overflow:hidden;
+                font-family:Arial,sans-serif;font-size:64px;
+                font-weight:900;line-height:1.05;
+                color:#000;overflow-wrap:break-word;">
+                ${safeText}
+            </div>
+        </foreignObject>
+    </svg>`;
 
-    return sharp(Buffer.from(svg))
-        .resize(512, 512)
+    return await sharp(Buffer.from(svg))
         .webp({ quality: 90 })
         .toBuffer();
 }
+
 
 
 async function createBratVideoSticker(text) {
