@@ -299,12 +299,9 @@ syncFullHistory: false,
   keepAliveIntervalMs: 15000
 });
 
+
 sock.ev.on('group-participants.update', async (update) => {
     try {
-        const config = JSON.parse(
-            fs.readFileSync('./config.json', 'utf8')
-        );
-
         const metadata = await sock.groupMetadata(update.id);
 
         for (const item of update.participants) {
@@ -313,38 +310,34 @@ sock.ev.on('group-participants.update', async (update) => {
 
             if (!participant) continue;
 
-            const number = participant.split('@')[0];
-            let message = '';
-
-            if (
-                update.action === 'add' &&
-                config.WELCOME_ENABLED
-            ) {
-                message = config.WELCOME_MESSAGE ||
-                    'Selamat datang @user!';
-            } else if (
-                update.action === 'remove' &&
-                config.GOODBYE_ENABLED
-            ) {
-                message = config.GOODBYE_MESSAGE ||
-                    'Selamat tinggal @user!';
-            } else {
-                continue;
+            if (update.action === 'add') {
+                await sock.sendMessage(update.id, {
+                    text:
+                        `👋 *WELCOME TO ${metadata.subject}*\n\n` +
+                        `Halo @${participant.split('@')[0]}!\n` +
+                        `Selamat bergabung di grup!\n\n` +
+                        `📜 Jangan lupa baca /aturan ya.`,
+                    mentions: [participant]
+                });
             }
 
-            message = message
-                .replace(/@user/g, `@${number}`)
-                .replace(/@group/g, metadata.subject);
-
-            await sock.sendMessage(update.id, {
-                text: message,
-                mentions: [participant]
-            });
+            if (
+                update.action === 'remove' ||
+                update.action === 'leave'
+            ) {
+                await sock.sendMessage(update.id, {
+                    text:
+                        `👋 @${participant.split('@')[0]} telah keluar dari grup.\n` +
+                        `Semoga sukses!`,
+                    mentions: [participant]
+                });
+            }
         }
     } catch (error) {
-        console.error('Welcome/goodbye:', error);
+        console.error('Welcome/Goodbye error:', error);
     }
 });
+
 
 
  
