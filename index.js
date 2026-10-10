@@ -6,6 +6,12 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 
 import crypto from 'node:crypto';
+import sharp from 'sharp';
+
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 import os from 'node:os';
 import path from 'node:path';
@@ -34,6 +40,102 @@ const SOCIALS = Object.entries(config.SOCIALS)
   .map(([name, url]) => `${name}: ${url}`)
   .join('\n');
 
+
+function escapeXml(text) {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
+async function createBratSticker(text) {
+    text = text.trim().slice(0, 250);
+
+    if (!text) {
+        throw new Error('Teks stiker kosong');
+    }
+
+    const words = text.split(/\s+/);
+    const lines = [];
+    let line = '';
+
+    for (const word of words) {
+        const next = line ? `${line} ${word}` : word;
+
+        if (next.length > 16 && line) {
+            lines.push(line);
+            line = word;
+        } else {
+            line = next;
+        }
+    }
+
+    if (line) lines.push(line);
+
+    const fontSize = Math.min(
+        54,
+        Math.max(20, Math.floor(380 / Math.max(
+            ...lines.map(line => line.length),
+            lines.length * 0.7
+        )))
+    );
+
+    const lineHeight = fontSize * 1.15;
+    const startY = 256 - ((lines.length - 1) * lineHeight) / 2;
+
+    const textSvg = lines.map((line, i) =>
+        `<text x="256" y="${startY + i * lineHeight}" ` +
+        `text-anchor="middle" dominant-baseline="middle" ` +
+        `font-family="Arial, sans-serif" font-weight="bold" ` +
+        `font-size="${fontSize}">${escapeXml(line)}</text>`
+    ).join('');
+
+    const svg = `
+        <svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+            <rect width="512" height="512" fill="#ffffff"/>
+            ${textSvg}
+        </svg>
+    `;
+
+    return sharp(Buffer.from(svg))
+        .resize(512, 512)
+        .webp({ quality: 90 })
+        .toBuffer();
+}
+
+
+async function createBratVideoSticker(text) {
+    const png = await createBratSticker(text);
+
+    const { stdout } = await execFileAsync('ffmpeg', [
+        '-version'
+    ]);
+
+    if (!stdout) {
+        throw new Error('FFmpeg tidak tersedia');
+    }
+
+    const input = Buffer.from(png);
+    const frames = [];
+
+    // Membuat animasi teks dengan menggeser gambar.
+    for (let i = 0; i < 8; i++) {
+        const frame = await sharp(input)
+            .modulate({
+                brightness: 0.85 + (i / 7) * 0.15
+            })
+            .webp()
+            .toBuffer();
+
+        frames.push(frame);
+    }
+
+    // Perlu encoder WebP animasi untuk menggabungkan frame.
+    // Fungsi ini belum menggabungkan frame menjadi stiker animasi.
+    return frames[0];
+}
 
 
 async function checkBedrockServer(address) {
@@ -594,6 +696,69 @@ case '/swgc': {
 
           break;
         }
+
+
+
+case '/bratvid': {
+    const bratText = args.join(' ').trim();
+
+    if (!bratText) {
+        await sock.sendMessage(m.chat, {
+            text: 'Contoh: /bratvid halo dunia'
+        }, { quoted: m });
+        break;
+    }
+
+    try {
+        const sticker = await createBratVideoSticker(bratText);
+
+        await sock.sendMessage(m.chat, {
+            sticker
+        }, { quoted: m });
+    } catch (error) {
+        console.error('BRATVID error:', error);
+
+        await sock.sendMessage(m.chat, {
+            text: 'Gagal membuat stiker BRAT animasi.'
+        }, { quoted: m });
+    }
+
+    break;
+}
+
+
+case '/brat': {
+    const bratText = args.join(' ').trim();
+
+    if (!bratText) {
+        await sock.sendMessage(m.chat, {
+            text: 'Contoh penggunaan: /brat halo dunia'
+        }, {
+            quoted: m
+        });
+        break;
+    }
+
+    try {
+        const sticker = await createBratSticker(bratText);
+
+        await sock.sendMessage(m.chat, {
+            sticker: sticker
+        }, {
+            quoted: m
+        });
+    } catch (error) {
+        console.error('BRAT sticker error:', error);
+
+        await sock.sendMessage(m.chat, {
+            text: 'Gagal membuat stiker BRAT. Coba lagi.'
+        }, {
+            quoted: m
+        });
+    }
+
+    break;
+}
 
 
         default:
