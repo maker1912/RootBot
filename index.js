@@ -475,6 +475,9 @@ case '/tomp3': {
   continue;
 }
 
+  continue;
+}
+
           
 case '/swgc': {
   if (!jid.endsWith('@g.us')) {
