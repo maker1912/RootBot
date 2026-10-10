@@ -696,7 +696,11 @@ case '/swgc': {
 
 
 case '/bratvid': {
-    const bratText = args.join(' ').trim();
+    const bratText = text
+    .trim()
+    .split(/\s+/)
+    .slice(1)
+    .join(' ');
 
     if (!bratText) {
         await sock.sendMessage(m.chat, {
