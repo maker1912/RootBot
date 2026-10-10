@@ -147,8 +147,6 @@ async function startBot() {
             'Pemeriksaan ping server belum diaktifkan.';
           break;
 
-      }
-
         default:
           continue;
       }
