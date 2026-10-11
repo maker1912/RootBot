@@ -199,11 +199,6 @@ async function checkGitHubUpdate() {
       ['rev-parse', 'HEAD']
     );
 
-    const { stdout: currentFile } = await execFileAsync(
-      'git',
-      ['show', 'HEAD:index.js']
-    );
-
     if (latestCommit === localCommit.trim()) return;
 
     updatePromptActive = true;
@@ -211,51 +206,14 @@ async function checkGitHubUpdate() {
     console.log('\n🔔 UPDATE TERSEDIA!');
     console.log('Commit lokal :', localCommit.trim().slice(0, 7));
     console.log('Commit GitHub:', latestCommit.slice(0, 7));
+    console.log('Untuk update, jalankan perintah berikut secara manual:');
+    console.log('git fetch origin ' + UPDATE_BRANCH);
+    console.log('git diff HEAD origin/' + UPDATE_BRANCH + ' -- index.js');
+    console.log('Jika sudah memeriksa perubahan dan ingin menerapkannya:');
+    console.log('git show origin/' + UPDATE_BRANCH + ':index.js > index.js.new');
+    console.log('Jangan timpa index.js sebelum memeriksa index.js.new.');
 
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-
-    const answer = (
-      await rl.question('Update index.js sekarang? (y/n): ')
-    ).trim().toLowerCase();
-
-    rl.close();
-
-    if (answer !== 'y') {
-      console.log('Update ditunda.');
-      updatePromptActive = false;
-      return;
-    }
-
-    await execFileAsync('git', ['fetch', 'origin', UPDATE_BRANCH]);
-
-    const { stdout: remoteFile } = await execFileAsync(
-      'git',
-      ['show', `origin/${UPDATE_BRANCH}:index.js`]
-    );
-
-    const fsPromises = await import('node:fs/promises');
-
-    await fsPromises.copyFile('index.js', 'index.js.backup');
-    await fsPromises.writeFile('index.js', remoteFile, 'utf8');
-
-    console.log('index.js berhasil diperbarui.');
-    console.log('Restart bot untuk menerapkan update.');
-
-    const { spawn } = await import('node:child_process');
-    const child = spawn(
-      process.execPath,
-      ['index.js'],
-      { stdio: 'inherit' }
-    );
-
-    child.on('error', error => {
-      console.error('Gagal restart:', error.message);
-    });
-
-    process.exit(0);
+    updatePromptActive = false;
   } catch (error) {
     console.error('Updater error:', error.message);
     updatePromptActive = false;
@@ -264,7 +222,6 @@ async function checkGitHubUpdate() {
 
 setTimeout(checkGitHubUpdate, 5000);
 setInterval(checkGitHubUpdate, UPDATE_INTERVAL);
-
 
 async function getMediaBuffer(sock, msg) {
   const jid = msg.key.remoteJid;
