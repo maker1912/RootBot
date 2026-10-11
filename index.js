@@ -45,13 +45,16 @@ async function downloadVideo(url) {
     }
 
     const allowedHosts = [
-        'youtube.com', 'www.youtube.com', 'm.youtube.com',
-        'youtu.be', 'music.youtube.com',
-        'tiktok.com', 'www.tiktok.com', 'vm.tiktok.com',
-        'instagram.com', 'www.instagram.com',
-        'facebook.com', 'www.facebook.com', 'fb.watch',
-        'x.com', 'www.x.com', 'twitter.com', 'www.twitter.com'
-    ];
+    'youtube.com', 'www.youtube.com', 'm.youtube.com',
+    'youtu.be', 'music.youtube.com',
+    'tiktok.com', 'www.tiktok.com',
+    'vm.tiktok.com', 'vt.tiktok.com',
+    'instagram.com', 'www.instagram.com',
+    'facebook.com', 'www.facebook.com',
+    'fb.watch',
+    'x.com', 'www.x.com',
+    'twitter.com', 'www.twitter.com'
+];
 
     if (!allowedHosts.includes(parsed.hostname.toLowerCase())) {
         throw new Error('Platform belum didukung.');
@@ -64,7 +67,7 @@ async function downloadVideo(url) {
     try {
         await execFileAsync('yt-dlp', [
             '--no-playlist',
-            '-f', 'best[height<=720][ext=mp4]/best[height<=720]/best',
+            '-f', 'best[height<=720]/best',
             '--merge-output-format', 'mp4',
             '--max-filesize', '50M',
             '--no-part',
