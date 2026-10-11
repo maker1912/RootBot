@@ -37,6 +37,65 @@ const SOCIALS = Object.entries(config.SOCIALS)
   .map(([name, url]) => `${name}: ${url}`)
   .join('\n');
 
+async function downloadVideo(url) {
+    const parsed = new URL(url);
+
+    if (parsed.protocol !== 'https:') {
+        throw new Error('URL harus menggunakan HTTPS.');
+    }
+
+    const allowedHosts = [
+        'youtube.com', 'www.youtube.com', 'm.youtube.com',
+        'youtu.be', 'music.youtube.com',
+        'tiktok.com', 'www.tiktok.com', 'vm.tiktok.com',
+        'instagram.com', 'www.instagram.com',
+        'facebook.com', 'www.facebook.com', 'fb.watch',
+        'x.com', 'www.x.com', 'twitter.com', 'www.twitter.com'
+    ];
+
+    if (!allowedHosts.includes(parsed.hostname.toLowerCase())) {
+        throw new Error('Platform belum didukung.');
+    }
+
+    const dir = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'rootbot-dl-')
+    );
+
+    try {
+        await execFileAsync('yt-dlp', [
+            '--no-playlist',
+            '-f', 'best[height<=720][ext=mp4]/best[height<=720]/best',
+            '--merge-output-format', 'mp4',
+            '--max-filesize', '50M',
+            '--no-part',
+            '-o', path.join(dir, 'video.%(ext)s'),
+            url
+        ], {
+            timeout: 180000,
+            maxBuffer: 2 * 1024 * 1024
+        });
+
+        const files = fs.readdirSync(dir)
+            .filter(name => /\.(mp4|webm|mkv|mov)$/i.test(name));
+
+        if (!files.length) {
+            throw new Error('File video tidak ditemukan.');
+        }
+
+        const file = path.join(dir, files[0]);
+        const stat = fs.statSync(file);
+
+        if (stat.size > 50 * 1024 * 1024) {
+            throw new Error('Video melebihi batas 50 MB.');
+        }
+
+        return { dir, file };
+    } catch (error) {
+        fs.rmSync(dir, { recursive: true, force: true });
+        throw error;
+    }
+}
+
 
 function escapeXml(text) {
     return text
