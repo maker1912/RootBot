@@ -5,6 +5,7 @@ import makeWASocket, {
   generateWAMessageFromContent
 } from '@whiskeysockets/baileys';
 
+import { plugins } from 'deffa-baileys';
 import crypto from 'node:crypto';
 import sharp from 'sharp';
 
@@ -45,92 +46,6 @@ function escapeXml(text) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&apos;');
 }
-
-
-
-async function createBratSticker(text) {
-    const input = String(text || '').trim();
-    if (!input) throw new Error('Teks BRAT kosong');
-
-    const escaped = input
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
-
-    const words = escaped.split(/\s+/);
-    const lines = [];
-    let line = '';
-
-    for (const word of words) {
-        const candidate = line ? line + ' ' + word : word;
-
-        if (candidate.length > 13 && line) {
-            lines.push(line);
-            line = word;
-        } else {
-            line = candidate;
-        }
-    }
-
-    if (line) lines.push(line);
-
-    const fontSize = Math.min(64, Math.floor(420 / Math.max(...lines.map(l => l.length), 1) * 1.7));
-    const lineHeight = Math.min(fontSize * 1.15, 72);
-    const startY = (512 - (lines.length - 1) * lineHeight) / 2;
-
-    const textSvg = lines.map((item, i) =>
-        `<text x="256" y="${startY + i * lineHeight}" text-anchor="middle"
-        dominant-baseline="middle" font-family="Arial, sans-serif"
-        font-size="${fontSize}" font-weight="900" fill="#000">${item}</text>`
-    ).join('');
-
-    const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
-        <rect width="512" height="512" fill="#fff"/>
-        ${textSvg}
-    </svg>`;
-
-    return await sharp(Buffer.from(svg))
-        .webp({ quality: 90 })
-        .toBuffer();
-}
-
-
-
-
-async function createBratVideoSticker(text) {
-    const png = await createBratSticker(text);
-
-    const { stdout } = await execFileAsync('ffmpeg', [
-        '-version'
-    ]);
-
-    if (!stdout) {
-        throw new Error('FFmpeg tidak tersedia');
-    }
-
-    const input = Buffer.from(png);
-    const frames = [];
-
-    // Membuat animasi teks dengan menggeser gambar.
-    for (let i = 0; i < 8; i++) {
-        const frame = await sharp(input)
-            .modulate({
-                brightness: 0.85 + (i / 7) * 0.15
-            })
-            .webp()
-            .toBuffer();
-
-        frames.push(frame);
-    }
-
-    // Perlu encoder WebP animasi untuk menggabungkan frame.
-    // Fungsi ini belum menggabungkan frame menjadi stiker animasi.
-    return frames[0];
-}
-
 
 async function checkBedrockServer(address) {
   const url =
@@ -177,51 +92,127 @@ const UPDATE_INTERVAL = 60_000;
 let updatePromptActive = false;
 
 
+
 async function checkGitHubUpdate() {
-  if (updatePromptActive) return;
+    if (updatePromptActive) return;
 
-  try {
-    const { stdout: remoteCommit } = await execFileAsync(
-      'git',
-      [
-        'ls-remote',
-        `https://github.com/${UPDATE_REPO}.git`,
-        `refs/heads/${UPDATE_BRANCH}`
-      ],
-      { timeout: 15000 }
-    );
+    let rl;
 
-    const latestCommit = remoteCommit.trim().split(/\s+/)[0];
-    if (!latestCommit) return;
+    try {
+        const repoUrl = `https://github.com/${UPDATE_REPO}.git`;
 
-    const { stdout: localCommit } = await execFileAsync(
-      'git',
-      ['rev-parse', 'HEAD']
-    );
+        const { stdout: remoteCommit } = await execFileAsync(
+            'git',
+            ['ls-remote', repoUrl, `refs/heads/${UPDATE_BRANCH}`],
+            { timeout: 15000 }
+        );
 
-    if (latestCommit === localCommit.trim()) return;
+        const latestCommit = remoteCommit.trim().split(/\s+/)[0];
+        if (!latestCommit || latestCommit === ignoredUpdateCommit) return;
 
-    updatePromptActive = true;
+        const { stdout: localCommit } = await execFileAsync(
+            'git',
+            ['rev-parse', 'HEAD'],
+            { timeout: 10000 }
+        );
 
-    console.log('\n🔔 UPDATE TERSEDIA!');
-    console.log('Commit lokal :', localCommit.trim().slice(0, 7));
-    console.log('Commit GitHub:', latestCommit.slice(0, 7));
-    console.log('Untuk update, jalankan perintah berikut secara manual:');
-    console.log('git fetch origin ' + UPDATE_BRANCH);
-    console.log('git diff HEAD origin/' + UPDATE_BRANCH + ' -- index.js');
-    console.log('Jika sudah memeriksa perubahan dan ingin menerapkannya:');
-    console.log('git show origin/' + UPDATE_BRANCH + ':index.js > index.js.new');
-    console.log('Jangan timpa index.js sebelum memeriksa index.js.new.');
+        if (latestCommit === localCommit.trim()) return;
 
-    updatePromptActive = false;
-  } catch (error) {
-    console.error('Updater error:', error.message);
-    updatePromptActive = false;
-  }
+        updatePromptActive = true;
+
+        console.log('\n🔔 UPDATE TERSEDIA!');
+        console.log('Commit lokal :', localCommit.trim().slice(0, 7));
+        console.log('Commit GitHub:', latestCommit.slice(0, 7));
+
+        rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        const answer = (
+            await rl.question('Update index.js sekarang? (y/n): ')
+        ).trim().toLowerCase();
+
+        rl.close();
+        rl = null;
+
+        if (answer !== 'y') {
+            ignoredUpdateCommit = latestCommit;
+            console.log('Update ditunda.');
+            return;
+        }
+
+        await execFileAsync(
+            'git',
+            ['fetch', repoUrl, `refs/heads/${UPDATE_BRANCH}`],
+            { timeout: 30000 }
+        );
+
+        const { stdout: remoteFile } = await execFileAsync(
+            'git',
+            ['show', 'FETCH_HEAD:index.js'],
+            { maxBuffer: 10 * 1024 * 1024 }
+        );
+
+        const backupDir = path.resolve('backups');
+        fs.mkdirSync(backupDir, { recursive: true });
+
+        const timestamp = new Date()
+            .toISOString()
+            .replace(/[:.]/g, '-');
+
+        const backupPath = path.join(
+            backupDir,
+            `index-${timestamp}.js`
+        );
+
+        const tempPath = path.resolve('index.update.tmp.js');
+        const currentPath = path.resolve('index.js');
+
+        fs.copyFileSync(currentPath, backupPath);
+        fs.writeFileSync(tempPath, remoteFile, 'utf8');
+
+        try {
+            await execFileAsync(
+                process.execPath,
+                ['--check', tempPath],
+                { timeout: 15000 }
+            );
+        } catch (error) {
+            fs.rmSync(tempPath, { force: true });
+            throw new Error(
+                `Sintaks update tidak valid. Backup lama: ${backupPath}`
+            );
+        }
+
+        fs.renameSync(tempPath, currentPath);
+
+        console.log('✅ index.js berhasil diperbarui.');
+        console.log('📦 Backup:', backupPath);
+        console.log('🔄 Menjalankan ulang bot...');
+
+        const { spawn } = await import('node:child_process');
+
+        const child = spawn(
+            process.execPath,
+            ['index.js'],
+            { stdio: 'inherit' }
+        );
+
+        child.on('error', error => {
+            console.error('Gagal menjalankan bot baru:', error.message);
+        });
+
+        process.exit(0);
+
+    } catch (error) {
+        console.error('❌ Updater error:', error.message);
+    } finally {
+        rl?.close();
+        updatePromptActive = false;
+    }
 }
 
-setTimeout(checkGitHubUpdate, 5000);
-setInterval(checkGitHubUpdate, UPDATE_INTERVAL);
 
 async function getMediaBuffer(sock, msg) {
   const jid = msg.key.remoteJid;
@@ -480,33 +471,31 @@ case '/menu':
     `┃ Bot: ${BOT_NAME}\n` +
     `┃ Owner: ${OWNER_NAME}\n` +
     '┃\n'+
-    '┃ RootBot Bot WhatsApp Simple dari ${OWNER_NAME}\n'+
+    '┃ Nama : \n'+
+    '┃ Role : \n'+
     '┣━━〔 MENU UTAMA 〕\n' +
-    '┃ /menu - Daftar command\n' +
-    '┃ /ping [IP:PORT] - Ping server Minecraft\n' +
-    '┃ /aturan - Aturan server\n' +
-    '┃ /rule - Aturan server\n' +
-    '┃ /rules - Aturan server\n' +
-    '┃ /about - Tentang server\n' +
-    '┃ /tentang - Tentang server\n' +
-    '┃ /sosial - Media sosial\n' +
-    '┃ /sosials - Media sosial\n' +
+    '┃ /menu \n' +
+    '┃ /ping \n' +
+    '┃ /aturan \n' +
+    '┃ /tentang \n' +
+    '┃ /sosials\n' +
+    '┃ /swgc\n' +
     '┣━━〔 CONVERTER 〕\n' +
-    '┃ /sticker - Gambar jadi stiker\n' +
-    '┃ /s - Gambar jadi stiker\n' +
-    '┃ /toimg - Stiker jadi gambar\n' +
-    '┃ /tovideo - Video jadi stiker animasi\n' +
-    '┃ /toaudio - Video jadi audio\n' +
-    '┃ /tomp3 - Media jadi MP3\n' +
-    '┃ /brat - Buat brat\n'+
-    '┃ /bratvid - Buat brat dengan animasi\n'+
-    '┣━━〔 GROUP STATUS 〕\n' +
-    '┃ /swgc [teks] - Status WhatsApp grup\n' +
+    '┃ /sticker\n' +
+    '┃ /s\n' +
+    '┃ /toimg\n' +
+    '┃ /tovideo\n' +
+    '┃ /toaudio\n' +
+    '┃ /tomp3\n' +
+    '┃ /brat\n'+
+    '┃ /bratvid \n'+
+    '┣━━〔 DOWNLOADER 〕\n' +
+    '┣━━〔 GAMES 〕\n' +
+    '┣━━〔 SHOPS 〕\n' +
     '┣━━〔 ADMIN 〕\n' +
-    '┃ /admin - Menu admin\n' +
-    '┃ /setrules - Ubah aturan (belum dibuat)\n' +
-    '┃ /setabout - Ubah tentang (belum dibuat)\n' +
-    '┃ /setsosial - Ubah sosial (belum dibuat)\n' +
+    '┃ /admin \n' +
+    '┃ /settings \n' +
+    '┃ /setadmin \n' +
     '╰━━━━━━━━━━━━';
   break;
 
@@ -652,62 +641,49 @@ case '/swgc': {
           break;
         }
 
-
-
-
-
+case '/brat':
 case '/bratvid': {
-    const bratText = isi.trim().split(/\s+/).slice(1).join(' ');
+    const textBrat = isi.slice(cmd.length).trim();
 
-    if (!bratText) {
-        await sock.sendMessage(jid, {
-            text: 'Contoh: /bratvid halo dunia'
-        }, { quoted: msg });
+    if (!textBrat) {
+        balasan = `Gunakan: ${cmd} teks kamu`;
+        break;
+    }
+
+    if (textBrat.length > 200) {
+        balasan = '❌ Maksimal 200 karakter.';
         break;
     }
 
     try {
-        const sticker = await createBratVideoSticker(bratText);
+        await sock.sendMessage(jid, {
+            text: '⏳ Membuat stiker Brat...'
+        }, { quoted: msg });
+
+        const result = cmd === '/brat'
+            ? await plugins.brat({ text: textBrat })
+            : await plugins.bratvid({ text: textBrat });
+
+        if (!result?.ok || !result.result) {
+            throw new Error(
+                result?.message || 'Generator tidak menghasilkan stiker.'
+            );
+        }
 
         await sock.sendMessage(jid, {
-            sticker: sticker
+            sticker: { url: result.result },
+            ...(cmd === '/bratvid' ? { isAnimated: true } : {})
         }, { quoted: msg });
+
     } catch (error) {
-        console.error('BRATVID error:', error);
+        console.error(`${cmd} error:`, error);
 
         await sock.sendMessage(jid, {
-            text: 'Gagal membuat stiker BRATVID.'
+            text: `❌ ${cmd} gagal. Coba lagi nanti.`
         }, { quoted: msg });
     }
 
-    break;
-}
-
-case '/brat': {
-    const bratText = isi.trim().split(/\s+/).slice(1).join(' ');
-
-    if (!bratText) {
-        await sock.sendMessage(jid, {
-            text: 'Contoh: /brat halo dunia'
-        }, { quoted: msg });
-        break;
-    }
-
-    try {
-        const sticker = await createBratSticker(bratText);
-
-        await sock.sendMessage(jid, {
-            sticker: sticker
-        }, { quoted: msg });
-    } catch (error) {
-        console.error('BRAT error:', error);
-
-        await sock.sendMessage(jid, {
-            text: 'Gagal membuat stiker BRAT.'
-        }, { quoted: msg });
-    }
-
-    break;
+    continue;
 }
 
 
