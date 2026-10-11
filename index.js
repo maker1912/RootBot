@@ -519,9 +519,11 @@ if (!state.creds.registered) {
       switch (cmd) {
 case '/menu':
   balasan =
-    `╭━━〔 ${BOT_NAME} 〕\n` +
-    `┃ Server: ${SERVER_NAME}\n` +
+    `╭━━〔 OVERVIEW 〕\n` +
+    `┃ Bot: ${BOT_NAME}\n` +
     `┃ Owner: ${OWNER_NAME}\n` +
+    '┃\n'+
+    '┃ RootBot Bot WhatsApp Simple dari maker1912\n'+
     '┣━━〔 MENU UTAMA 〕\n' +
     '┃ /menu - Daftar command\n' +
     '┃ /ping [IP:PORT] - Ping server Minecraft\n' +
@@ -539,6 +541,8 @@ case '/menu':
     '┃ /tovideo - Video jadi stiker animasi\n' +
     '┃ /toaudio - Video jadi audio\n' +
     '┃ /tomp3 - Media jadi MP3\n' +
+    '┃ /brat - Buat brat\n'+
+    '┃ /bratvid - Buat brat dengan animasi\n'+
     '┣━━〔 GROUP STATUS 〕\n' +
     '┃ /swgc [teks] - Status WhatsApp grup\n' +
     '┣━━〔 ADMIN 〕\n' +
