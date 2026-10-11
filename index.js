@@ -732,6 +732,57 @@ case '/swgc': {
           break;
         }
 
+
+case 'tt':
+case 'yt':
+case 'ig':
+case 'fb':
+case 'x':
+case 'media': {
+    const url = isi.trim().split(/\s+/)[1];
+
+    if (!url) {
+        await sock.sendMessage(chatId, {
+            text: `Contoh penggunaan:\n/tt https://...\n/yt https://...\n/ig https://...\n/fb https://...\n/x https://...`
+        }, { quoted: msg });
+        break;
+    }
+
+    let result;
+
+    try {
+        await sock.sendMessage(chatId, {
+            text: '⏳ Sedang memproses video...'
+        }, { quoted: msg });
+
+        result = await downloadVideo(url);
+
+        await sock.sendMessage(chatId, {
+            video: { url: result.file },
+            mimetype: 'video/mp4',
+            caption: '✅ Video berhasil diproses oleh VARZE BOT.'
+        }, { quoted: msg });
+
+    } catch (error) {
+        console.error('Downloader error:', error);
+
+        await sock.sendMessage(chatId, {
+            text: `❌ Gagal mengunduh video.\n${error.message || 'Coba URL lain.'}`
+        }, { quoted: msg });
+
+    } finally {
+        if (result?.dir) {
+            fs.rmSync(result.dir, {
+                recursive: true,
+                force: true
+            });
+        }
+    }
+
+    break;
+}
+
+
 case '/brat':
 case '/bratvid': {
     const textBrat = isi.slice(cmd.length).trim();
