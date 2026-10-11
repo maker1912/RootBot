@@ -480,7 +480,7 @@ case '/menu':
     `┃ Bot: ${BOT_NAME}\n` +
     `┃ Owner: ${OWNER_NAME}\n` +
     '┃\n'+
-    '┃ RootBot Bot WhatsApp Simple dari maker1912\n'+
+    '┃ RootBot Bot WhatsApp Simple dari ${OWNER_NAME}\n'+
     '┣━━〔 MENU UTAMA 〕\n' +
     '┃ /menu - Daftar command\n' +
     '┃ /ping [IP:PORT] - Ping server Minecraft\n' +
