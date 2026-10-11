@@ -344,8 +344,13 @@ syncFullHistory: false,
 });
 
 
+
 sock.ev.on('group-participants.update', async (update) => {
     try {
+        const config = JSON.parse(
+            fs.readFileSync('./config.json', 'utf8')
+        );
+
         const metadata = await sock.groupMetadata(update.id);
 
         for (const item of update.participants) {
@@ -354,25 +359,51 @@ sock.ev.on('group-participants.update', async (update) => {
 
             if (!participant) continue;
 
-            if (update.action === 'add') {
+            const user = `@${participant.split('@')[0]}`;
+            const group = metadata.subject;
+
+            const isWelcome = update.action === 'add';
+            const isGoodbye =
+                update.action === 'remove' ||
+                update.action === 'leave';
+
+            if (isWelcome && config.WELCOME_ENABLED === false) continue;
+            if (isGoodbye && config.GOODBYE_ENABLED === false) continue;
+            if (!isWelcome && !isGoodbye) continue;
+
+            const message = (
+                isWelcome
+                    ? config.WELCOME_MESSAGE
+                    : config.GOODBYE_MESSAGE
+            ) || (isWelcome
+                ? `Selamat datang di ${group}, ${user}!`
+                : `${user} telah meninggalkan ${group}.`);
+
+            const banner = isWelcome
+                ? config.WELCOME_BANNER
+                : config.GOODBYE_BANNER;
+
+            const text = message
+                .replace(/\{user\}/g, user)
+                .replace(/\{group\}/g, group);
+
+            const confirm = isWelcome
+                ? config.WELCOME_CONFIRM
+                : config.GOODBYE_CONFIRM;
+
+            const caption = confirm
+                ? `${text}\n\n— VARZE BOT`
+                : text;
+
+            if (banner && banner.startsWith('https://')) {
                 await sock.sendMessage(update.id, {
-                    text:
-                        `👋 *WELCOME TO ${metadata.subject}*\n\n` +
-                        `Halo @${participant.split('@')[0]}!\n` +
-                        `Selamat bergabung di grup!\n\n` +
-                        `📜 Jangan lupa baca /aturan ya.`,
+                    image: { url: banner },
+                    caption,
                     mentions: [participant]
                 });
-            }
-
-            if (
-                update.action === 'remove' ||
-                update.action === 'leave'
-            ) {
+            } else {
                 await sock.sendMessage(update.id, {
-                    text:
-                        `👋 @${participant.split('@')[0]} telah keluar dari grup.\n` +
-                        `Semoga sukses!`,
+                    text: caption,
                     mentions: [participant]
                 });
             }
@@ -381,6 +412,7 @@ sock.ev.on('group-participants.update', async (update) => {
         console.error('Welcome/Goodbye error:', error);
     }
 });
+
 
 
 
