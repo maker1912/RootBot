@@ -18,11 +18,17 @@
     "WhatsApp": "LINK_WHATSAPP",
     "YouTube": "LINK_YOUTUBE",
     "Discord": "LINK_DISCORD",
-  
+
   "WELCOME_ENABLED": true,
+  "WELCOME_BANNER": "https://example.com/welcome.jpg",
+  "WELCOME_MESSAGE": "👋 *WELCOME TO {group}*\n\nHalo {user}, selamat bergabung!\nJangan lupa baca /aturan ya!",
+
   "GOODBYE_ENABLED": true,
-  "WELCOME_MESSAGE": "👋 Selamat datang {user} di {group}! Sekarang ada {count} anggota.",
-  "GOODBYE_MESSAGE": "👋 {user} telah keluar dari {group}. Anggota sekarang: {count}."
+  "GOODBYE_BANNER": "https://example.com/goodbye.jpg",
+  "GOODBYE_MESSAGE": "👋 {user} telah meninggalkan grup *{group}*.",
+
+  "WELCOME_CONFIRM": true,
+  "GOODBYE_CONFIRM": true
 
   }
 }
