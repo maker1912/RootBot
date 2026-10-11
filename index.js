@@ -581,6 +581,12 @@ case '/menu':
     '┃ /brat\n'+
     '┃ /bratvid \n'+
     '┣━━〔 DOWNLOADER 〕\n' +
+    '┃ /yt\n' +
+    '┃ /x\n' +
+    '┃ /tt\n' +
+    '┃ /ig\n' +
+    '┃ /fb\n' +
+    '┃ /media\n' 
     '┣━━〔 GAMES 〕\n' +
     '┣━━〔 SHOPS 〕\n' +
     '┣━━〔 ADMIN 〕\n' +
@@ -733,17 +739,18 @@ case '/swgc': {
         }
 
 
-case 'tt':
-case 'yt':
-case 'ig':
-case 'fb':
-case 'x':
-case 'media': {
+case '/tt':
+case '/yt':
+case '/ig':
+case '/fb':
+case '/x':
+case '/media': {
     const url = isi.trim().split(/\s+/)[1];
 
     if (!url) {
-        await sock.sendMessage(chatId, {
-            text: `Contoh penggunaan:\n/tt https://...\n/yt https://...\n/ig https://...\n/fb https://...\n/x https://...`
+        await sock.sendMessage(jid, {
+            text: `Contoh penggunaan:
+${cmd} https://link-video`
         }, { quoted: msg });
         break;
     }
@@ -751,14 +758,14 @@ case 'media': {
     let result;
 
     try {
-        await sock.sendMessage(chatId, {
+        await sock.sendMessage(jid, {
             text: '⏳ Sedang memproses video...'
         }, { quoted: msg });
 
         result = await downloadVideo(url);
 
-        await sock.sendMessage(chatId, {
-            video: { url: result.file },
+        await sock.sendMessage(jid, {
+            video: fs.readFileSync(result.file),
             mimetype: 'video/mp4',
             caption: '✅ Video berhasil diproses oleh VARZE BOT.'
         }, { quoted: msg });
@@ -766,7 +773,7 @@ case 'media': {
     } catch (error) {
         console.error('Downloader error:', error);
 
-        await sock.sendMessage(chatId, {
+        await sock.sendMessage(jid, {
             text: `❌ Gagal mengunduh video.\n${error.message || 'Coba URL lain.'}`
         }, { quoted: msg });
 
@@ -781,7 +788,6 @@ case 'media': {
 
     break;
 }
-
 
 case '/brat':
 case '/bratvid': {
