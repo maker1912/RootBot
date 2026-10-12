@@ -811,16 +811,17 @@ case '/bratvid': {
             text: '⏳ Membuat stiker Brat...'
         }, { quoted: msg });
 
-        const result = cmd === '/brat'
-            ? await plugins.brat({ text: textBrat })
-            : await plugins.bratvid({ text: textBrat });
+    const result = cmd === '/brat'
+    ? await plugins.brat({ text: textBrat })
+    : await plugins.bratvid({ text: textBrat });
 
-        if (!result?.ok || !result.result) {
-            throw new Error(
-                result?.message || 'Generator tidak menghasilkan stiker.'
-            );
-        }
+console.log(`[${cmd}] Generator result:`, result);
 
+if (!result?.ok || !result.result) {
+    throw new Error(
+        result?.message || 'Generator tidak menghasilkan stiker.'
+    );
+}
         await sock.sendMessage(jid, {
             sticker: { url: result.result },
             ...(cmd === '/bratvid' ? { isAnimated: true } : {})
