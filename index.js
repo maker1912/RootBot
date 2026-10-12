@@ -67,9 +67,9 @@ async function downloadVideo(url) {
     try {
         await execFileAsync('yt-dlp', [
             '--no-playlist',
-            '-f', 'best[height<=720]/best',
+            '-f', 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best',
             '--merge-output-format', 'mp4',
-            '--max-filesize', '50M',
+            '--max-filesize', '500M',
             '--no-part',
             '-o', path.join(dir, 'video.%(ext)s'),
             url
