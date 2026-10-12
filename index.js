@@ -88,7 +88,7 @@ async function downloadVideo(url) {
         const file = path.join(dir, files[0]);
         const stat = fs.statSync(file);
 
-        if (stat.size > 50 * 1024 * 1024) {
+        if (stat.size > 500 * 1024 * 1024) {
             throw new Error('Video melebihi batas 50 MB.');
         }
 
